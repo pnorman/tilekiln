@@ -1,0 +1,41 @@
+# This config is designed to be used with an OpenStreetMap Carto database with
+# shapefiles loaded into the DB.
+# https://github.com/gravitystorm/openstreetmap-carto/pull/4092
+metadata:
+  id: v1 # Required, used internally by Tilekiln
+  bounds: [-180, -85.05112877980659, 180, 85.0511287798066 ] # Optional bounds
+  name: name for tilejson, optional
+  description: description for tilejson, optional
+  version: version for tilejson, optional
+  attribution: attribution for tilejson, optional
+  center: [0, 0, 4] # center for tilejson, optional
+vector_layers:
+  water:
+    fields:
+      water: Type of water
+    description: Waterbody and ocean areas
+    sql:
+    - minzoom: 0
+      maxzoom: 8
+      extent: 2048
+      file: water.sql.jinja2
+  admin:
+    fields:
+      admin_level: Level of admin boundary
+    description: Administrative boundaries
+    sql:
+    - minzoom: 1 # Must not overlap with other templates
+      maxzoom: 3
+      file: ne-admin.sql.jinja2
+    - minzoom: 4 # Must not overlap with other templates
+      maxzoom: 10
+      file: admin.sql.jinja2
+  country_names:
+    fields:
+      name: Name of country
+      area: Area of country
+    description: Points for country names
+    sql:
+    - minzoom: 3
+      maxzoom: 14
+      file: country.sql.jinja2

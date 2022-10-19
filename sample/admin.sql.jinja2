@@ -1,0 +1,18 @@
+SELECT
+    ST_AsMVTGeom(way, {{bbox}}, {{extent}}) AS way,
+    admin_level::integer
+{% if zoom <= 10 %}
+  FROM planet_osm_roads
+{% else %}
+  FROM planet_osm_line
+{% endif %}
+  WHERE way && {{bbox}}
+    AND boundary = 'administrative'
+{% if zoom <= 2 %}
+    AND admin_level IN ('0', '1', '2')
+{% elif zoom <= 10 %}
+    AND admin_level IN ('0', '1', '2', '3', '4')
+{% elif zoom <= 12 %}
+    AND admin_level IN ('0', '1', '2', '3', '4', '5', '6')
+{% endif %}
+    AND osm_id < 0
