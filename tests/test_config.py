@@ -1,6 +1,7 @@
 from unittest import TestCase
 from fs.memoryfs import MemoryFS
-from tilekiln.config import Config, Definition
+from tilekiln.config import Config, LayerConfig
+from tilekiln.tile import Tile
 import yaml
 
 
@@ -14,15 +15,19 @@ class TestConfig(TestCase):
             self.assertEqual(c.version, None)
             self.assertEqual(c.bounds, None)
             self.assertEqual(c.center, None)
+            self.assertEqual(c.minzoom, None)
+            self.assertEqual(c.maxzoom, None)
 
         with MemoryFS() as fs:
+            fs.writetext("blank.sql.jinja2", "")
             c_str = ('''{"metadata": {"name": "name", '''
                      '''"description":"description", '''
                      '''"attribution":"attribution", "version": "1.0.0",'''
                      '''"bounds": [-180, -85, 180, 85], "center": [0, 0]},'''
                      '''"vector_layers": {"building":{'''
                      '''"description": "buildings",'''
-                     '''"fields":{}}}}''')
+                     '''"fields":{},'''
+                     '''"sql": [{"minzoom":13, "maxzoom":14, "file": "blank.sql.jinja2"}]}}}''')
 
             # Check the test is valid yaml to save debugging
             yaml.safe_load(c_str)
@@ -33,22 +38,40 @@ class TestConfig(TestCase):
             self.assertEqual(c.version, "1.0.0")
             self.assertEqual(c.bounds, [-180, -85, 180, 85])
             self.assertEqual(c.center, [0, 0])
+            self.assertEqual(c.attribution, "attribution")
+            self.assertEqual(c.minzoom, 13)
+            self.assertEqual(c.maxzoom, 14)
 
 
-class TestDefinition(TestCase):
-    def test_attributes(self):
+class TestLayerConfig(TestCase):
+    def test_render(self):
         with MemoryFS() as fs:
-            fs.writetext("blank.sql.jinja2", "")
-            d = Definition({"minzoom": 1, "maxzoom": 3, "extent": 1024,
-                            "buffer": 8, "file": "blank.sql.jinja2"}, fs)
-            self.assertEqual(d.minzoom, 1)
-            self.assertEqual(d.maxzoom, 3)
-            self.assertEqual(d.extent, 1024)
-            self.assertEqual(d.buffer, 8)
+            fs.writetext("one.sql.jinja2", "one")
+            fs.writetext("two.sql.jinja2", "two")
+            layer = LayerConfig("foo", {"sql": [{"minzoom": 4, "maxzoom": 8,
+                                                 "file": "one.sql.jinja2"}]}, fs)
 
-            d = Definition({"minzoom": 2, "maxzoom": 4,
-                            "file": "blank.sql.jinja2"}, fs)
-            self.assertEqual(d.minzoom, 2)
-            self.assertEqual(d.maxzoom, 4)
-            self.assertEqual(d.extent, 4096)
-            self.assertEqual(d.buffer, 0)
+            self.assertIsNone(layer.render_sql(Tile(2, 0, 0)))
+            self.assertIsNotNone(layer.render_sql(Tile(6, 0, 0)))
+            self.assertIsNone(layer.render_sql(Tile(10, 0, 0)))
+
+            layer = LayerConfig("foo",
+                                {"sql": [{"minzoom": 4, "maxzoom": 4, "file": "one.sql.jinja2"},
+                                         {"minzoom": 6, "maxzoom": 6, "file": "two.sql.jinja2"}]},
+                                fs)
+            self.assertIsNone(layer.render_sql(Tile(3, 0, 0)))
+            self.assertIsNone(layer.render_sql(Tile(5, 0, 0)))
+            self.assertIsNone(layer.render_sql(Tile(7, 0, 0)))
+
+            self.assertEqual(layer.render_sql(Tile(4, 0, 0)), '''WITH mvtgeom AS
+(
+one
+)
+SELECT ST_AsMVT(mvtgeom.*, 'foo', ST_TileEnvelope(4, 0, 0, margin=>0), 'way', NULL)
+FROM mvtgeom;''')
+            self.assertEqual(layer.render_sql(Tile(6, 0, 0)), '''WITH mvtgeom AS
+(
+two
+)
+SELECT ST_AsMVT(mvtgeom.*, 'foo', ST_TileEnvelope(6, 0, 0, margin=>0), 'way', NULL)
+FROM mvtgeom;''')
