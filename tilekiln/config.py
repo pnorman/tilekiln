@@ -1,5 +1,5 @@
 import yaml
-
+import json
 from tilekiln.definition import Definition
 
 
@@ -27,6 +27,25 @@ class Config:
         if self.layers:
             self.minzoom = min([layer.minzoom for layer in self.layers])
             self.maxzoom = max([layer.maxzoom for layer in self.layers])
+
+    def tilejson(self):
+        '''Returns a TileJSON'''
+
+        # Todo: test with no attribution
+        result = {"tilejson": "3.0.0",
+                  # TODO: make a function argument
+                  "tiles": ["http://localhost:8000/tiles/{z}/{x}/{y}.mvt"],
+                  "attribution": self.attribution,
+                  "bounds": self.bounds,
+                  "center": self.center,
+                  "description": self.description,
+                  "maxzoom": self.maxzoom,
+                  "minzoom": self.minzoom,
+                  "name": self.name,
+                  "scheme": "xyz"}
+        # TODO: vector_layers
+
+        return json.dumps(result, sort_keys=True, indent=4)
 
 
 class LayerConfig:

@@ -32,7 +32,8 @@ setup (
         "Click",
         "pyyaml",
         "fs",
-        "Jinja2"
+        "Jinja2",
+        "fastapi"
     ],
     extras_require={
         "test": ["pytest"]

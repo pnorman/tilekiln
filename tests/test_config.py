@@ -42,6 +42,8 @@ class TestConfig(TestCase):
             self.assertEqual(c.minzoom, 13)
             self.assertEqual(c.maxzoom, 14)
 
+    # TODO: test tilejson
+
 
 class TestLayerConfig(TestCase):
     def test_render(self):
