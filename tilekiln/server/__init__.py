@@ -6,7 +6,10 @@ import os
 TILEKILN_CONFIG = "TILEKILN_CONFIG"
 TILEKILN_URL = "TILEKILN_URL"
 
+TILE_PREFIX = "/tiles"
+
 STANDARD_HEADERS = {"Cache-Control": "no-cache"}
+
 dev = FastAPI()
 
 
@@ -31,4 +34,10 @@ def tilejson():
     global config
     return Response(content=config.tilejson(os.environ[TILEKILN_URL]),
                     media_type="application/json",
+                    headers=STANDARD_HEADERS)
+
+
+@dev.get(TILE_PREFIX + "/{zoom}/{x}/{y}.mvt")
+def serve_tile(zoom, x, y):
+    return Response(content=f"Tile for {zoom}/{x}/{y}",
                     headers=STANDARD_HEADERS)

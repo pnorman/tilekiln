@@ -58,5 +58,5 @@ def dev(config, host, port, num_threads):
     '''Starts a server for development,
     '''
     os.environ[tilekiln.server.TILEKILN_CONFIG] = config
-    os.environ[tilekiln.server.TILEKILN_URL] = f"http://{host}:{port}/tiles"
+    os.environ[tilekiln.server.TILEKILN_URL] = f"http://{host}:{port}" + tilekiln.server.TILE_PREFIX
     uvicorn.run("tilekiln.server:dev", host=host, port=port, workers=num_threads)
