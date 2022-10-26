@@ -28,13 +28,13 @@ class Config:
             self.minzoom = min([layer.minzoom for layer in self.layers])
             self.maxzoom = max([layer.maxzoom for layer in self.layers])
 
-    def tilejson(self):
+    def tilejson(self, url):
         '''Returns a TileJSON'''
 
         # Todo: test with no attribution
         result = {"tilejson": "3.0.0",
                   # TODO: make a function argument
-                  "tiles": ["http://localhost:8000/tiles/{z}/{x}/{y}.mvt"],
+                  "tiles": [url + "/{z}/{x}/{y}.mvt"],
                   "attribution": self.attribution,
                   "bounds": self.bounds,
                   "center": self.center,
