@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Response
 import tilekiln
+import os
 
 
 dev = FastAPI()
@@ -9,11 +10,13 @@ dev = FastAPI()
 config = None
 
 
-def load_config(config_path):
+@dev.on_event("startup")
+def load_config():
     global config
-    config = tilekiln.load_config(config_path)
+    config = tilekiln.load_config(os.environ["TILEKILN_CONFIG"])
 
 
 @dev.get("/tilejson.json")
-async def root():
+def tilejson():
+    global config
     return Response(content=config.tilejson())

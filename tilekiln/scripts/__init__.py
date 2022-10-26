@@ -57,5 +57,5 @@ def sql(config, layer, zoom, x, y):
 def dev(config, host, port, num_threads):
     '''Starts a server for development,
     '''
-    tilekiln.server.load_config(config)
-    uvicorn.run("tilekiln.server:dev", host=host, port=port, workers=1)
+    os.environ["TILEKILN_CONFIG"] = config
+    uvicorn.run("tilekiln.server:dev", host=host, port=port, workers=num_threads)
