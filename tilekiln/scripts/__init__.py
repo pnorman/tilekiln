@@ -48,15 +48,29 @@ def sql(config, layer, zoom, x, y):
 
 @cli.command()
 @click.argument('config', type=click.Path(exists=True))
-@click.option('--host', default='127.0.0.1', show_default=True,
+@click.option('--bind-host', default='127.0.0.1', show_default=True,
               help='Bind socket to this host. ')
-@click.option('--port', default=8000, show_default=True,
+@click.option('--bind-port', default=8000, show_default=True,
               type=click.INT, help='Bind socket to this port.')
 @click.option('-n', '--num-threads', default=len(os.sched_getaffinity(0)),
               show_default=True, help='Number of worker processes.')
-def dev(config, host, port, num_threads):
+@click.option('-d', '--dbname')
+@click.option('-h', '--host')
+@click.option('-p', '--port')
+@click.option('-U', '--username')
+def dev(config, bind_host, bind_port, num_threads, dbname, host, port, username):
     '''Starts a server for development,
     '''
     os.environ[tilekiln.server.TILEKILN_CONFIG] = config
-    os.environ[tilekiln.server.TILEKILN_URL] = f"http://{host}:{port}" + tilekiln.server.TILE_PREFIX
-    uvicorn.run("tilekiln.server:dev", host=host, port=port, workers=num_threads)
+    os.environ[tilekiln.server.TILEKILN_URL] = (f"http://{bind_host}:{bind_port}" +
+                                                tilekiln.server.TILE_PREFIX)
+    if dbname is not None:
+        os.environ["PGDATABASE"] = dbname
+    if host is not None:
+        os.environ["PGHOST"] = host
+    if port is not None:
+        os.environ["PGPORT"] = port
+    if username is not None:
+        os.environ["PGUSER"] = username
+
+    uvicorn.run("tilekiln.server:dev", host=bind_host, port=bind_port, workers=num_threads)

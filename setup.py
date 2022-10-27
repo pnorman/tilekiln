@@ -33,7 +33,8 @@ setup (
         "pyyaml",
         "fs",
         "Jinja2",
-        "fastapi"
+        "fastapi",
+        "psycopg"
     ],
     extras_require={
         "test": ["pytest"]
