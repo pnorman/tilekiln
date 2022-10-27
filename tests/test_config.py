@@ -42,7 +42,28 @@ class TestConfig(TestCase):
             self.assertEqual(c.minzoom, 13)
             self.assertEqual(c.maxzoom, 14)
 
-    # TODO: test tilejson
+            self.assertEqual(c.tilejson("foo"), '''{
+    "attribution": "attribution",
+    "bounds": [
+        -180,
+        -85,
+        180,
+        85
+    ],
+    "center": [
+        0,
+        0
+    ],
+    "description": "description",
+    "maxzoom": 14,
+    "minzoom": 13,
+    "name": "name",
+    "scheme": "xyz",
+    "tilejson": "3.0.0",
+    "tiles": [
+        "foo/{z}/{x}/{y}.mvt"
+    ]
+}''')
 
 
 class TestLayerConfig(TestCase):
