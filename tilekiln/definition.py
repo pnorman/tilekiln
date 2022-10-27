@@ -24,13 +24,9 @@ class Definition:
         '''Generate the SQL for a layer
         '''
 
-        # Tile validity constraints
+        # Tile validity constraints. x/y are checked by Tile class
         assert tile.zoom >= self.minzoom
         assert tile.zoom <= self.maxzoom
-        assert tile.x >= 0
-        assert tile.x < 2**tile.zoom
-        assert tile.y >= 0
-        assert tile.y < 2**tile.zoom
 
         # See https://postgis.net/docs/ST_AsMVT.html for SQL source
 
