@@ -44,7 +44,8 @@ class Config:
                   "scheme": "xyz"}
         # TODO: vector_layers
 
-        return json.dumps({k: v for k, v in result.items() if v is not None}, sort_keys=True, indent=4)
+        return json.dumps({k: v for k, v in result.items() if v is not None},
+                          sort_keys=True, indent=4)
 
 
 class LayerConfig:
