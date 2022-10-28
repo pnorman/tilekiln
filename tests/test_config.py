@@ -18,6 +18,13 @@ class TestConfig(TestCase):
             self.assertEqual(c.minzoom, None)
             self.assertEqual(c.maxzoom, None)
 
+            self.assertEqual(c.tilejson("bar"), '''{
+    "scheme": "xyz",
+    "tilejson": "3.0.0",
+    "tiles": [
+        "bar/{z}/{x}/{y}.mvt"
+    ]
+}''')
         with MemoryFS() as fs:
             fs.writetext("blank.sql.jinja2", "")
             c_str = ('''{"metadata": {"name": "name", '''

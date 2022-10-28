@@ -33,7 +33,6 @@ class Config:
 
         # Todo: test with no attribution
         result = {"tilejson": "3.0.0",
-                  # TODO: make a function argument
                   "tiles": [url + "/{z}/{x}/{y}.mvt"],
                   "attribution": self.attribution,
                   "bounds": self.bounds,
@@ -45,7 +44,7 @@ class Config:
                   "scheme": "xyz"}
         # TODO: vector_layers
 
-        return json.dumps(result, sort_keys=True, indent=4)
+        return json.dumps({k: v for k, v in result.items() if v is not None}, sort_keys=True, indent=4)
 
 
 class LayerConfig:
