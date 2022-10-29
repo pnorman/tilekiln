@@ -23,7 +23,8 @@ class TestConfig(TestCase):
     "tilejson": "3.0.0",
     "tiles": [
         "bar/{z}/{x}/{y}.mvt"
-    ]
+    ],
+    "vector_layers": []
 }''')
         with MemoryFS() as fs:
             fs.writetext("blank.sql.jinja2", "")
@@ -69,7 +70,8 @@ class TestConfig(TestCase):
     "tilejson": "3.0.0",
     "tiles": [
         "foo/{z}/{x}/{y}.mvt"
-    ]
+    ],
+    "vector_layers": []
 }''')
 
 
@@ -97,11 +99,11 @@ class TestLayerConfig(TestCase):
 (
 one
 )
-SELECT ST_AsMVT(mvtgeom.*, 'foo', ST_TileEnvelope(4, 0, 0, margin=>0), 'way', NULL)
+SELECT ST_AsMVT(mvtgeom.*, 'foo', 4096, 'way', NULL)
 FROM mvtgeom;''')
             self.assertEqual(layer.render_sql(Tile(6, 0, 0)), '''WITH mvtgeom AS
 (
 two
 )
-SELECT ST_AsMVT(mvtgeom.*, 'foo', ST_TileEnvelope(6, 0, 0, margin=>0), 'way', NULL)
+SELECT ST_AsMVT(mvtgeom.*, 'foo', 4096, 'way', NULL)
 FROM mvtgeom;''')

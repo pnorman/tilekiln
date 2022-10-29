@@ -33,7 +33,7 @@ class TestDefinition(TestCase):
 (
 SELECT 1
 )
-SELECT ST_AsMVT(mvtgeom.*, 'one', ST_TileEnvelope(2, 0, 0, margin=>0), 'way', NULL)
+SELECT ST_AsMVT(mvtgeom.*, 'one', 1024, 'way', NULL)
 FROM mvtgeom;'''
             self.assertEqual(d.render_sql(Tile(2, 0, 0)), expected)
 
@@ -49,7 +49,7 @@ ST_TileEnvelope(2, 0, 1, margin=>0)
 1024
 256
 )
-SELECT ST_AsMVT(mvtgeom.*, 'two', ST_TileEnvelope(2, 0, 1, margin=>0), 'way', NULL)
+SELECT ST_AsMVT(mvtgeom.*, 'two', 1024, 'way', NULL)
 FROM mvtgeom;'''
             self.assertEqual(d.render_sql(Tile(2, 0, 1)), expected)
 
@@ -65,6 +65,6 @@ FROM mvtgeom;'''
 9783.939619140625
 95725474.4709896
 )
-SELECT ST_AsMVT(mvtgeom.*, 'units', ST_TileEnvelope(2, 0, 1, margin=>0), 'way', NULL)
+SELECT ST_AsMVT(mvtgeom.*, 'units', 1024, 'way', NULL)
 FROM mvtgeom;'''
             self.assertEqual(d.render_sql(Tile(2, 0, 1)), expected)

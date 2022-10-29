@@ -1,6 +1,7 @@
 import yaml
 import json
 from tilekiln.definition import Definition
+from tilekiln.tile import Tile
 
 
 class Config:
@@ -41,11 +42,16 @@ class Config:
                   "maxzoom": self.maxzoom,
                   "minzoom": self.minzoom,
                   "name": self.name,
-                  "scheme": "xyz"}
+                  "scheme": "xyz",
+                  "vector_layers": []}
         # TODO: vector_layers
 
         return json.dumps({k: v for k, v in result.items() if v is not None},
                           sort_keys=True, indent=4)
+
+    def layer_queries(self, tile: Tile):
+        return {layer.render_sql(tile) for layer in self.layers
+                if layer.render_sql(tile) is not None}
 
 
 class LayerConfig:
