@@ -32,7 +32,6 @@ class Config:
     def tilejson(self, url):
         '''Returns a TileJSON'''
 
-        # Todo: test with no attribution
         result = {"tilejson": "3.0.0",
                   "tiles": [url + "/{z}/{x}/{y}.mvt"],
                   "attribution": self.attribution,
@@ -42,9 +41,15 @@ class Config:
                   "maxzoom": self.maxzoom,
                   "minzoom": self.minzoom,
                   "name": self.name,
-                  "scheme": "xyz",
-                  "vector_layers": []}
-        # TODO: vector_layers
+                  "scheme": "xyz"}
+
+        vector_layers = [{"id": layer.id,
+                          "fields": layer.fields,
+                          "description": layer.description,
+                          "minzoom": layer.minzoom,
+                          "maxzoom": layer.maxzoom} for layer in self.layers]
+        result["vector_layers"] = [{k: v for k, v in layer.items() if v is not None}
+                                   for layer in vector_layers]
 
         return json.dumps({k: v for k, v in result.items() if v is not None},
                           sort_keys=True, indent=4)
@@ -62,7 +67,7 @@ class LayerConfig:
         '''
         self.id = id
         self.description = layer_yaml.get("description")
-        self.fields = layer_yaml.get("fields")
+        self.fields = layer_yaml.get("fields", {})
         self.definitions = []
         self.geometry_type = set(layer_yaml.get("geometry_type", []))
 

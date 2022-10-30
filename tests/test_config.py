@@ -6,6 +6,8 @@ import yaml
 
 
 class TestConfig(TestCase):
+    maxDiff = None
+
     def test_properties(self):
         with MemoryFS() as fs:
             c = Config('''{"metadata": {}}''', fs)
@@ -34,7 +36,7 @@ class TestConfig(TestCase):
                      '''"bounds": [-180, -85, 180, 85], "center": [0, 0]},'''
                      '''"vector_layers": {"building":{'''
                      '''"description": "buildings",'''
-                     '''"fields":{},'''
+                     '''"fields":{"foo": "bar"},'''
                      '''"sql": [{"minzoom":13, "maxzoom":14, "file": "blank.sql.jinja2"}]}}}''')
 
             # Check the test is valid yaml to save debugging
@@ -71,7 +73,61 @@ class TestConfig(TestCase):
     "tiles": [
         "foo/{z}/{x}/{y}.mvt"
     ],
-    "vector_layers": []
+    "vector_layers": [
+        {
+            "description": "buildings",
+            "fields": {
+                "foo": "bar"
+            },
+            "id": "building",
+            "maxzoom": 14,
+            "minzoom": 13
+        }
+    ]
+}''')
+
+            # Test without fields for the layer
+            fs.writetext("blank.sql.jinja2", "")
+            c_str = ('''{"metadata": {"name": "name", '''
+                     '''"description":"description", '''
+                     '''"attribution":"attribution", "version": "1.0.0",'''
+                     '''"bounds": [-180, -85, 180, 85], "center": [0, 0]},'''
+                     '''"vector_layers": {"building":{'''
+                     '''"sql": [{"minzoom":13, "maxzoom":14, "file": "blank.sql.jinja2"}]}}}''')
+
+            # Check the test is valid yaml to save debugging
+            yaml.safe_load(c_str)
+            c = Config(c_str, fs)
+
+            self.assertEqual(c.tilejson("foo"), '''{
+    "attribution": "attribution",
+    "bounds": [
+        -180,
+        -85,
+        180,
+        85
+    ],
+    "center": [
+        0,
+        0
+    ],
+    "description": "description",
+    "maxzoom": 14,
+    "minzoom": 13,
+    "name": "name",
+    "scheme": "xyz",
+    "tilejson": "3.0.0",
+    "tiles": [
+        "foo/{z}/{x}/{y}.mvt"
+    ],
+    "vector_layers": [
+        {
+            "fields": {},
+            "id": "building",
+            "maxzoom": 14,
+            "minzoom": 13
+        }
+    ]
 }''')
 
 
