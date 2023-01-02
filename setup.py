@@ -34,7 +34,8 @@ setup (
         "fs",
         "Jinja2",
         "fastapi",
-        "psycopg"
+        "psycopg",
+        "uvicorn"
     ],
     extras_require={
         "test": ["pytest"]
