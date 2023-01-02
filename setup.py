@@ -35,6 +35,7 @@ setup (
         "Jinja2",
         "fastapi",
         "psycopg",
+        "psycopg[pool]",
         "uvicorn"
     ],
     extras_require={

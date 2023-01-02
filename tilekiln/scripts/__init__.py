@@ -3,7 +3,9 @@ import tilekiln
 from tilekiln.tile import Tile
 import sys
 import tilekiln.server
+from tilekiln.storage import Storage
 import uvicorn
+import psycopg_pool
 import os
 
 
@@ -82,3 +84,27 @@ def dev(config, bind_host, bind_port, num_threads, dbname, host, port, username)
         os.environ["PGUSER"] = username
 
     uvicorn.run("tilekiln.server:dev", host=bind_host, port=bind_port, workers=num_threads)
+
+
+@cli.group()
+def storage():
+    pass
+
+
+@storage.command()
+@click.argument('config', type=click.Path(exists=True))
+@click.option('--storage-dbname')
+@click.option('--storage-host')
+@click.option('--storage-port')
+@click.option('--storage-username')
+def init(config, storage_dbname, storage_host, storage_port, storage_username):
+    ''' Initialize storage for tiles'''
+    c = tilekiln.load_config(config)
+
+    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
+                                                   "host": storage_host,
+                                                   "port": storage_port,
+                                                   "user": storage_username})
+    storage = Storage(c, pool)
+    storage.create_tables()
+    pool.close()
