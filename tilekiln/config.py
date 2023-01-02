@@ -11,12 +11,13 @@ class Config:
            filesystem.
         '''
         config = yaml.safe_load(yaml_string)
-        self.name = config.get("metadata").get("name")
-        self.description = config.get("metadata").get("description")
-        self.attribution = config.get("metadata").get("attribution")
-        self.version = config.get("metadata").get("version")
-        self.bounds = config.get("metadata").get("bounds")
-        self.center = config.get("metadata").get("center")
+        self.id = config["metadata"]["id"]
+        self.name = config["metadata"].get("name")
+        self.description = config["metadata"].get("description")
+        self.attribution = config["metadata"].get("attribution")
+        self.version = config["metadata"].get("version")
+        self.bounds = config["metadata"].get("bounds")
+        self.center = config["metadata"].get("center")
 
         # TODO: Make private and expose needed operations through proper functions
         self.layers = []

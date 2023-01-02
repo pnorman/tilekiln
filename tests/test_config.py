@@ -10,7 +10,8 @@ class TestConfig(TestCase):
 
     def test_properties(self):
         with MemoryFS() as fs:
-            c = Config('''{"metadata": {}}''', fs)
+            c = Config('''{"metadata": {"id":"foo"}}''', fs)
+            self.assertEqual(c.id, "foo")
             self.assertEqual(c.name, None)
             self.assertEqual(c.description, None)
             self.assertEqual(c.attribution, None)
@@ -30,7 +31,8 @@ class TestConfig(TestCase):
 }''')
         with MemoryFS() as fs:
             fs.writetext("blank.sql.jinja2", "")
-            c_str = ('''{"metadata": {"name": "name", '''
+            c_str = ('''{"metadata": {"id":"id", '''
+                     '''"name": "name", '''
                      '''"description":"description", '''
                      '''"attribution":"attribution", "version": "1.0.0",'''
                      '''"bounds": [-180, -85, 180, 85], "center": [0, 0]},'''
@@ -42,6 +44,7 @@ class TestConfig(TestCase):
             # Check the test is valid yaml to save debugging
             yaml.safe_load(c_str)
             c = Config(c_str, fs)
+            self.assertEqual(c.id, "id")
             self.assertEqual(c.name, "name")
             self.assertEqual(c.description, "description")
             self.assertEqual(c.attribution, "attribution")
@@ -88,7 +91,8 @@ class TestConfig(TestCase):
 
             # Test without fields for the layer
             fs.writetext("blank.sql.jinja2", "")
-            c_str = ('''{"metadata": {"name": "name", '''
+            c_str = ('''{"metadata": {"id":"id", '''
+                     '''"name": "name", '''
                      '''"description":"description", '''
                      '''"attribution":"attribution", "version": "1.0.0",'''
                      '''"bounds": [-180, -85, 180, 85], "center": [0, 0]},'''
