@@ -108,3 +108,47 @@ def init(config, storage_dbname, storage_host, storage_port, storage_username):
     storage = Storage(c, pool)
     storage.create_tables()
     pool.close()
+
+
+@storage.command()
+@click.argument('config', type=click.Path(exists=True))
+@click.option('--storage-dbname')
+@click.option('--storage-host')
+@click.option('--storage-port')
+@click.option('--storage-username')
+def destroy(config, storage_dbname, storage_host, storage_port, storage_username):
+    ''' Destroy storage for tiles'''
+    c = tilekiln.load_config(config)
+
+    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
+                                                   "host": storage_host,
+                                                   "port": storage_port,
+                                                   "user": storage_username})
+    storage = Storage(c, pool)
+    storage.remove_tables()
+    pool.close()
+
+
+@storage.command()
+@click.argument('config', type=click.Path(exists=True))
+@click.option('--storage-dbname')
+@click.option('--storage-host')
+@click.option('--storage-port')
+@click.option('--storage-username')
+@click.option('-z', '--zoom', type=click.INT, multiple=True)
+def delete(config, storage_dbname, storage_host, storage_port, storage_username, zoom):
+    ''' Delete tiles from storage, optionally by-zoom'''
+    c = tilekiln.load_config(config)
+
+    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
+                                                   "host": storage_host,
+                                                   "port": storage_port,
+                                                   "user": storage_username})
+    storage = Storage(c, pool)
+
+    if (zoom == ()):
+        storage.truncate_tables()
+    else:
+        storage.truncate_tables(zoom)
+
+    pool.close()
