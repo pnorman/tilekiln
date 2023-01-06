@@ -12,6 +12,14 @@ class Tile:
         self.x = x
         self.y = y
 
+    def __repr__(self):
+        return f"Tile({self.zoom},{self.x},{self.y})"
+
+    @classmethod
+    def from_string(cls, tile):
+        fragments = tile.split("/")
+        return cls(int(fragments[0]), int(fragments[1]), int(fragments[2]))
+
     def bbox(self, buffer):
         '''Returns the bounding box for a tile
         '''

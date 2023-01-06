@@ -54,8 +54,22 @@ class Storage:
                 else:
                     for z in zooms:
                         self.__truncate_table(z, cur)
+                conn.commit()
 
     def __truncate_table(self, zoom, cur):
         tablename = f"{self.__config.id}_z{zoom}"
         schema = DEFAULT_SCHEMA
         cur.execute(f'''TRUNCATE TABLE "{schema}"."{tablename}"''')
+
+    def __delete_tile(self, tile, cur):
+        schema = DEFAULT_SCHEMA
+        cur.execute(f'''DELETE FROM "{schema}"."{self.__config.id}"
+                        WHERE z = %s AND x = %s AND y = %s''',
+                    (tile.zoom, tile.x, tile.y))
+
+    def delete_tiles(self, tiles):
+        with self.__pool.connection() as conn:
+            with conn.cursor() as cur:
+                for tile in tiles:
+                    self.__delete_tile(tile, cur)
+            conn.commit()

@@ -152,3 +152,23 @@ def delete(config, storage_dbname, storage_host, storage_port, storage_username,
         storage.truncate_tables(zoom)
 
     pool.close()
+
+
+@storage.command()
+@click.argument('config', type=click.Path(exists=True))
+@click.option('--storage-dbname')
+@click.option('--storage-host')
+@click.option('--storage-port')
+@click.option('--storage-username')
+def tiledelete(config, storage_dbname, storage_host, storage_port, storage_username):
+    c = tilekiln.load_config(config)
+
+    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
+                                                   "host": storage_host,
+                                                   "port": storage_port,
+                                                   "user": storage_username})
+    storage = Storage(c, pool)
+
+    tiles = {Tile.from_string(t) for t in sys.stdin}
+    click.echo(f"Deleting {len(tiles)} tiles")
+    storage.delete_tiles(tiles)
