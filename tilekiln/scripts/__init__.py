@@ -16,12 +16,14 @@ def cli():
 
 @cli.group()
 def config():
+    '''Commands to work with and check config files'''
     pass
 
 
 @config.command()
 @click.argument('config', type=click.Path(exists=True))
 def test(config):
+    '''Tests a tilekiln config for validity'''
     tilekiln.load_config(config)
 
 
@@ -69,7 +71,7 @@ def sql(config, layer, zoom, x, y):
 @click.option('-p', '--port')
 @click.option('-U', '--username')
 def dev(config, bind_host, bind_port, num_threads, dbname, host, port, username):
-    '''Starts a server for development,
+    '''Starts a server for development
     '''
     os.environ[tilekiln.server.TILEKILN_CONFIG] = config
     os.environ[tilekiln.server.TILEKILN_URL] = (f"http://{bind_host}:{bind_port}" +
@@ -88,6 +90,7 @@ def dev(config, bind_host, bind_port, num_threads, dbname, host, port, username)
 
 @cli.group()
 def storage():
+    '''Commands working with tile storage'''
     pass
 
 
