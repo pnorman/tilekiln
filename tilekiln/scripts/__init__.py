@@ -2,7 +2,7 @@ import click
 import tilekiln
 from tilekiln.tile import Tile
 import sys
-import tilekiln.server
+import tilekiln.dev
 from tilekiln.storage import Storage
 import uvicorn
 import psycopg_pool
@@ -73,9 +73,9 @@ def sql(config, layer, zoom, x, y):
 def dev(config, bind_host, bind_port, num_threads, dbname, host, port, username):
     '''Starts a server for development
     '''
-    os.environ[tilekiln.server.TILEKILN_CONFIG] = config
-    os.environ[tilekiln.server.TILEKILN_URL] = (f"http://{bind_host}:{bind_port}" +
-                                                tilekiln.server.TILE_PREFIX)
+    os.environ[tilekiln.dev.TILEKILN_CONFIG] = config
+    os.environ[tilekiln.dev.TILEKILN_URL] = (f"http://{bind_host}:{bind_port}" +
+                                                tilekiln.dev.TILE_PREFIX)
     if dbname is not None:
         os.environ["PGDATABASE"] = dbname
     if host is not None:
@@ -85,7 +85,7 @@ def dev(config, bind_host, bind_port, num_threads, dbname, host, port, username)
     if username is not None:
         os.environ["PGUSER"] = username
 
-    uvicorn.run("tilekiln.server:dev", host=bind_host, port=bind_port, workers=num_threads)
+    uvicorn.run("tilekiln.dev:dev", host=bind_host, port=bind_port, workers=num_threads)
 
 
 @cli.group()
