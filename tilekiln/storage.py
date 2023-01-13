@@ -73,3 +73,12 @@ class Storage:
                 for tile in tiles:
                     self.__delete_tile(tile, cur)
             conn.commit()
+
+    def get_tile(self, tile):
+        with self.__pool.connection() as conn:
+            schema = DEFAULT_SCHEMA
+            with conn.cursor() as cur:
+                cur.execute(f'''SELECT tile FROM "{schema}"."{self.__config.id}"
+                                WHERE z = %s AND x = %s AND y = %s''',
+                            (tile.zoom, tile.x, tile.y), binary=True)
+                return cur.fetchone()[0]

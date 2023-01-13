@@ -3,6 +3,7 @@ import tilekiln
 from tilekiln.tile import Tile
 import sys
 import tilekiln.dev
+import tilekiln.server
 from tilekiln.storage import Storage
 import uvicorn
 import psycopg_pool
@@ -75,7 +76,8 @@ def dev(config, bind_host, bind_port, num_threads, dbname, host, port, username)
     '''
     os.environ[tilekiln.dev.TILEKILN_CONFIG] = config
     os.environ[tilekiln.dev.TILEKILN_URL] = (f"http://{bind_host}:{bind_port}" +
-                                                tilekiln.dev.TILE_PREFIX)
+                                             tilekiln.dev.TILE_PREFIX)
+
     if dbname is not None:
         os.environ["PGDATABASE"] = dbname
     if host is not None:
@@ -86,6 +88,38 @@ def dev(config, bind_host, bind_port, num_threads, dbname, host, port, username)
         os.environ["PGUSER"] = username
 
     uvicorn.run("tilekiln.dev:dev", host=bind_host, port=bind_port, workers=num_threads)
+
+
+@cli.command()
+@click.argument('config', type=click.Path(exists=True))
+@click.option('--bind-host', default='127.0.0.1', show_default=True,
+              help='Bind socket to this host. ')
+@click.option('--bind-port', default=8000, show_default=True,
+              type=click.INT, help='Bind socket to this port.')
+@click.option('-n', '--num-threads', default=len(os.sched_getaffinity(0)),
+              show_default=True, help='Number of worker processes.')
+@click.option('--storage-dbname')
+@click.option('--storage-host')
+@click.option('--storage-port')
+@click.option('--storage-username')
+def serve(config, bind_host, bind_port, num_threads,
+          storage_dbname, storage_host, storage_port, storage_username):
+    '''Starts a server for pre-generated tiles from DB'''
+    os.environ[tilekiln.server.TILEKILN_CONFIG] = config
+    os.environ[tilekiln.server.TILEKILN_URL] = (f"http://{bind_host}:{bind_port}" +
+                                                tilekiln.dev.TILE_PREFIX)
+    os.environ[tilekiln.server.TILEKILN_THREADS] = str(num_threads)
+
+    if storage_dbname is not None:
+        os.environ["PGDATABASE"] = storage_dbname
+    if storage_host is not None:
+        os.environ["PGHOST"] = storage_host
+    if storage_port is not None:
+        os.environ["PGPORT"] = storage_port
+    if storage_username is not None:
+        os.environ["PGUSER"] = storage_username
+
+    uvicorn.run("tilekiln.server:server", host=bind_host, port=bind_port, workers=num_threads)
 
 
 @cli.group()
