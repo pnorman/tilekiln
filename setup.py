@@ -47,6 +47,6 @@ setup (
     },
     project_urls={
         "Bug Reports": "https://github.com/pnorman/tilekiln/issues",
-        "Source": "https://github.com/pypa/tilekiln/",
+        "Source": "https://github.com/pnorman/tilekiln/",
     }
 )

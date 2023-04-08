@@ -1,6 +1,8 @@
 
 from tilekiln.config import Config
+from tilekiln.tile import Tile
 from psycopg_pool import ConnectionPool
+import gzip
 
 DEFAULT_SCHEMA = "tilekiln"
 
@@ -81,4 +83,18 @@ class Storage:
                 cur.execute(f'''SELECT tile FROM "{schema}"."{self.__config.id}"
                                 WHERE z = %s AND x = %s AND y = %s''',
                             (tile.zoom, tile.x, tile.y), binary=True)
-                return cur.fetchone()[0]
+                return gzip.decompress(cur.fetchone()[0])
+
+    def save_tile(self, tile: Tile, tiledata):
+        with self.__pool.connection() as conn:
+            with conn.cursor() as cur:
+                self.__write_to_storage(tile, gzip.compress(tiledata, mtime=0), cur)
+
+    def __write_to_storage(self, tile: Tile, tiledata, cur):
+        tablename = f"{self.__config.id}_z{tile.zoom}"
+        schema = DEFAULT_SCHEMA
+        cur.execute(f'''INSERT INTO "{schema}"."{tablename}" (z, x, y, tile)
+VALUES (%s, %s, %s, %s)
+ON CONFLICT (z, x, y)
+DO UPDATE SET tile = EXCLUDED.tile''',
+                    (tile.zoom, tile.x, tile.y, tiledata))

@@ -5,7 +5,9 @@ import sys
 import tilekiln.dev
 import tilekiln.server
 from tilekiln.storage import Storage
+from tilekiln.kiln import Kiln
 import uvicorn
+import psycopg
 import psycopg_pool
 import os
 
@@ -209,3 +211,46 @@ def tiledelete(config, storage_dbname, storage_host, storage_port, storage_usern
     tiles = {Tile.from_string(t) for t in sys.stdin}
     click.echo(f"Deleting {len(tiles)} tiles")
     storage.delete_tiles(tiles)
+
+
+@cli.group()
+def generate():
+    '''Commands for tile generation'''
+    pass
+
+
+@generate.command()
+@click.argument('config', type=click.Path(exists=True))
+@click.option('-n', '--num-threads', default=len(os.sched_getaffinity(0)),
+              show_default=True, help='Number of worker processes.')
+@click.option('-d', '--dbname')
+@click.option('-h', '--host')
+@click.option('-p', '--port')
+@click.option('-U', '--username')
+@click.option('--storage-dbname')
+@click.option('--storage-host')
+@click.option('--storage-port')
+@click.option('--storage-username')
+def tiles(config, num_threads, dbname, host, port, username,
+          storage_dbname, storage_host, storage_port, storage_username):
+    '''Generate specific tiles.
+       Pass a list of z/x/y to stdin to generate those tiles'''
+
+    c = tilekiln.load_config(config)
+
+    tiles = {Tile.from_string(t) for t in sys.stdin}
+    threads = min(num_threads, len(tiles))  # No point in more threads than tiles
+
+    click.echo(f"Rendering {len(tiles)} tiles over {threads} threads")
+
+    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
+                                                   "host": storage_host,
+                                                   "port": storage_port,
+                                                   "user": storage_username})
+    storage = Storage(c, pool)
+
+    gen_conn = psycopg.connect(dbname=dbname, host=host, port=port, username=username)
+    kiln = Kiln(c, gen_conn)
+    for tile in tiles:
+        mvt = kiln.render(tile)
+        storage.save_tile(tile, mvt)
