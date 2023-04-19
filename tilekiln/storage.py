@@ -83,7 +83,10 @@ class Storage:
                 cur.execute(f'''SELECT tile FROM "{schema}"."{self.__config.id}"
                                 WHERE z = %s AND x = %s AND y = %s''',
                             (tile.zoom, tile.x, tile.y), binary=True)
-                return gzip.decompress(cur.fetchone()[0])
+                result = cur.fetchone()
+                if result is None:
+                    return None
+                return gzip.decompress(result[0])
 
     def save_tile(self, tile: Tile, tiledata):
         with self.__pool.connection() as conn:
