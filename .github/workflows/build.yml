@@ -1,5 +1,5 @@
-#
-name: Python package
+---
+name: Python build
 on: [push, pull_request]
 jobs:
   build:
