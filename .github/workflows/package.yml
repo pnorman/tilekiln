@@ -1,6 +1,12 @@
 ---
 name: Python package
-on: push
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+  release:
+    types: [published]
 jobs:
   package:
     name: Build & inspect our package.
@@ -29,7 +35,7 @@ jobs:
   publish-to-pypi:
     name: Publish tagged versions to PyPi
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
     needs: [publish-to-testpypi]
     environment:
       name: pypi
