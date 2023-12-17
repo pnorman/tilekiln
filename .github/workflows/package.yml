@@ -1,16 +1,16 @@
 ---
 name: Python package
-on: [push, pull_request]
+on: push
 jobs:
-  dist:
+  package:
     name: Build & inspect our package.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: hynek/build-and-inspect-python-package@v2
-  publish:
+  publish-to-testpypi:
     name: Upload release to TestPyPI
-    needs: [dist]
+    needs: [package]
     runs-on: ubuntu-latest
     environment:
       name: testpypi
