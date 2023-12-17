@@ -1,0 +1,59 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[project]
+name = "tilekiln"
+dynamic = ["version"]
+
+description = "A set of command-line utilities to generate and serve Mapbox Vector Tiles (MVTs)"
+readme = "README.md"
+license = ""
+requires-python = ">=3.9, <4"
+authors = [
+    { name = "Paul Norman", email = "osm@paulnorman.ca" },
+]
+keywords = [
+    "mvt",
+    "openstreetmap",
+    "osm",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: GIS",
+]
+dependencies = [
+    "Click",
+    "fastapi",
+    "fs",
+    "Jinja2",
+    "psycopg",
+    "psycopg[pool]",
+    "pyyaml",
+    "uvicorn",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
+
+[project.scripts]
+tilekiln = "tilekiln.scripts:cli"
+
+[project.urls]
+"Bug Reports" = "https://github.com/pnorman/tilekiln/issues"
+Homepage = "https://github.com/pnorman/tilekiln"
+Source = "https://github.com/pnorman/tilekiln/"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/tilekiln",
+]
