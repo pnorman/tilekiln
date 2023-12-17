@@ -20,6 +20,7 @@ jobs:
     name: Upload release to TestPyPI
     needs: [package]
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     environment:
       name: testpypi
       url: https://test.pypi.org/p/tilekiln
