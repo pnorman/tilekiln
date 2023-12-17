@@ -5,6 +5,10 @@ build-backend = "hatchling.build"
 [tool.hatch.version]
 source = "vcs"
 
+# Allows pypi uploads. ref: https://github.com/ofek/hatch-vcs/discussions/12
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+
 [project]
 name = "tilekiln"
 dynamic = ["version"]
