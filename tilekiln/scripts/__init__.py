@@ -73,13 +73,18 @@ def sql(config, layer, zoom, x, y):
 @click.option('-h', '--host')
 @click.option('-p', '--port')
 @click.option('-U', '--username')
-def dev(config, bind_host, bind_port, num_threads, dbname, host, port, username):
+@click.option('--base-url', help='Defaults to http://127.0.0.1:8000/tiles' +
+              ' or /tiles on the bind host and port')
+def dev(config, bind_host, bind_port, num_threads, dbname, host, port, username, base_url):
     '''Starts a server for development
     '''
     os.environ[tilekiln.dev.TILEKILN_CONFIG] = config
-    os.environ[tilekiln.dev.TILEKILN_URL] = (f"http://{bind_host}:{bind_port}" +
-                                             tilekiln.dev.TILE_PREFIX)
 
+    if base_url is not None:
+        os.environ[tilekiln.dev.TILEKILN_URL] = base_url
+    else:
+        os.environ[tilekiln.dev.TILEKILN_URL] = (f"http://{bind_host}:{bind_port}" +
+                                                 tilekiln.dev.TILE_PREFIX)
     if dbname is not None:
         os.environ["PGDATABASE"] = dbname
     if host is not None:
@@ -108,15 +113,20 @@ def dev(config, bind_host, bind_port, num_threads, dbname, host, port, username)
 @click.option('--storage-host')
 @click.option('--storage-port')
 @click.option('--storage-username')
+@click.option('--base-url', help='Defaults to http://127.0.0.1:8000/tiles' +
+              ' or /tiles on the bind host and port')
 def live(config, bind_host, bind_port, num_threads,
-          dbname, host, port, username,
-          storage_dbname, storage_host, storage_port, storage_username):
+         dbname, host, port, username,
+         storage_dbname, storage_host, storage_port, storage_username, base_url):
     '''Starts a server for pre-generated tiles from DB'''
     os.environ[tilekiln.server.TILEKILN_CONFIG] = config
-    os.environ[tilekiln.server.TILEKILN_URL] = (f"http://{bind_host}:{bind_port}" +
-                                                tilekiln.dev.TILE_PREFIX)
     os.environ[tilekiln.server.TILEKILN_THREADS] = str(num_threads)
 
+    if base_url is not None:
+        os.environ[tilekiln.dev.TILEKILN_URL] = base_url
+    else:
+        os.environ[tilekiln.dev.TILEKILN_URL] = (f"http://{bind_host}:{bind_port}" +
+                                                 tilekiln.dev.TILE_PREFIX)
     if dbname is not None:
         os.environ["GENERATE_PGDATABASE"] = dbname
     if host is not None:
@@ -150,14 +160,19 @@ def live(config, bind_host, bind_port, num_threads,
 @click.option('--storage-host')
 @click.option('--storage-port')
 @click.option('--storage-username')
+@click.option('--base-url', help='Defaults to http://127.0.0.1:8000/tiles' +
+              ' or /tiles on the bind host and port')
 def serve(config, bind_host, bind_port, num_threads,
-          storage_dbname, storage_host, storage_port, storage_username):
+          storage_dbname, storage_host, storage_port, storage_username, base_url):
     '''Starts a server for pre-generated tiles from DB'''
     os.environ[tilekiln.server.TILEKILN_CONFIG] = config
-    os.environ[tilekiln.server.TILEKILN_URL] = (f"http://{bind_host}:{bind_port}" +
-                                                tilekiln.dev.TILE_PREFIX)
     os.environ[tilekiln.server.TILEKILN_THREADS] = str(num_threads)
 
+    if base_url is not None:
+        os.environ[tilekiln.dev.TILEKILN_URL] = base_url
+    else:
+        os.environ[tilekiln.dev.TILEKILN_URL] = (f"http://{bind_host}:{bind_port}" +
+                                                 tilekiln.dev.TILE_PREFIX)
     if storage_dbname is not None:
         os.environ["PGDATABASE"] = storage_dbname
     if storage_host is not None:
