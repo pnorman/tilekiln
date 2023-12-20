@@ -32,9 +32,10 @@ server.add_middleware(CORSMiddleware,
                       allow_headers=["*"])
 live = FastAPI()
 live.add_middleware(CORSMiddleware,
-                      allow_origins=["*"],
-                      allow_methods=["*"],
-                      allow_headers=["*"])
+                    allow_origins=["*"],
+                    allow_methods=["*"],
+                    allow_headers=["*"])
+
 
 @server.on_event("startup")
 def load_server_config():
@@ -46,6 +47,7 @@ def load_server_config():
     # a plain ConnectionPool() will connect to the right DB
     pool = psycopg_pool.NullConnectionPool()
     storage = Storage(config, pool)
+
 
 @live.on_event("startup")
 def load_live_config():
@@ -116,6 +118,7 @@ def serve_tile(zoom: int, x: int, y: int):
                     media_type="application/vnd.mapbox-vector-tile",
                     headers=STANDARD_HEADERS)
 
+
 @live.head(TILE_PREFIX + "/{zoom}/{x}/{y}.mvt")
 @live.get(TILE_PREFIX + "/{zoom}/{x}/{y}.mvt")
 def live_serve_tile(zoom: int, x: int, y:  int):
@@ -135,5 +138,5 @@ def live_serve_tile(zoom: int, x: int, y:  int):
     # TODO: Make async
     storage.save_tile(tile, generated)
     return Response(generated,
-                        media_type="application/vnd.mapbox-vector-tile",
-                        headers=STANDARD_HEADERS)
+                    media_type="application/vnd.mapbox-vector-tile",
+                    headers=STANDARD_HEADERS)
