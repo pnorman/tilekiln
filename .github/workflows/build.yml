@@ -19,7 +19,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install flake8 pytest
       - name: Lint with flake8
-        run: flake8 . --count --exit-zero
+        run: flake8 . --count
       - name: Install tilekiln
         run: python -m pip install -e .
       - name: Test with pytest
