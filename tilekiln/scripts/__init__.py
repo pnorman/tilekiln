@@ -64,7 +64,7 @@ def sql(config, layer, zoom, x, y):
 @cli.command()
 @click.argument('config', type=click.Path(exists=True))
 @click.option('--bind-host', default='127.0.0.1', show_default=True,
-              help='Bind socket to this host. ')
+              help='Bind socket to this host.')
 @click.option('--bind-port', default=8000, show_default=True,
               type=click.INT, help='Bind socket to this port.')
 @click.option('-n', '--num-threads', default=len(os.sched_getaffinity(0)),
