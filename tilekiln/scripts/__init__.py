@@ -261,6 +261,8 @@ def delete(config, storage_dbname, storage_host, storage_port, storage_username,
 @click.option('--storage-port')
 @click.option('--storage-username')
 def tiledelete(config, storage_dbname, storage_host, storage_port, storage_username):
+    '''Delete specific tiles
+       Pass a list of z/x/y to stdin to generate those tiles'''
     c = tilekiln.load_config(config)
 
     pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,

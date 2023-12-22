@@ -66,13 +66,13 @@ def load_live_config():
         generate_args["username"] = os.environ["GENERATE_PGUSER"]
 
     storage_args = {}
-    if "GENERATE_PGDATABASE" in os.environ:
+    if "STORAGE_PGDATABASE" in os.environ:
         storage_args["dbname"] = os.environ["STORAGE_PGDATABASE"]
-    if "GENERATE_PGHOST" in os.environ:
+    if "STORAGE_PGHOST" in os.environ:
         storage_args["host"] = os.environ["STORAGE_PGHOST"]
-    if "GENERATE_PGPORT" in os.environ:
+    if "STORAGE_PGPORT" in os.environ:
         storage_args["port"] = os.environ["STORAGE_PGPORT"]
-    if "GENERATE_PGUSER" in os.environ:
+    if "STORAGE_PGUSER" in os.environ:
         storage_args["username"] = os.environ["STORAGE_PGUSER"]
 
     storage_pool = psycopg_pool.NullConnectionPool(kwargs=storage_args)
