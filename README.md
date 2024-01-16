@@ -20,8 +20,36 @@ Tilekiln requires a PostGIS database with data loaded to generate vector tiles.
 - PostGIS 3.1+
 - Python 3.10+
 
-## History
+## Usage
+Tilekiln commands can be broken into two sets, commands which involve serving tiles, and CLI commands. Command-line options can be found with `--help`.
 
+### CLI commands
+
+#### `config`
+Commands to work with and check config files
+
+#### `sql`
+Prints the SQL for a tile
+
+#### `storage`
+Commands working with tile storage
+
+#### `generate`
+Commands for tile generation
+
+### Serving commands
+These commands start a HTTP server to serve content.
+
+#### `dev`
+Starts a server to live-render tiles with no caching, intended for development.
+
+#### `serve`
+Serves tiles from tile storage. This is highly scalable and the preferred mode for production.
+
+#### `live`
+Like `serve`, but fall back to live generation if a tile is missing from storage.
+
+## History
 The tilekiln configuration syntax is based on studies and experience with other vector tile and map generation configurations. In particular, it is heavily inspired by Tilezen's use of Jinja2 templates and TileJSON for necessary metadata.
 
 ## License
