@@ -11,17 +11,17 @@ import psycopg_pool
 
 
 # Constants for environment variable names
+# Passing around enviornment variables really is the best way to get this to fastapi
 TILEKILN_CONFIG = "TILEKILN_CONFIG"
 TILEKILN_URL = "TILEKILN_URL"
 TILEKILN_THREADS = "TILEKILN_THREADS"
-
-TILE_PREFIX = "/tiles"
 
 STANDARD_HEADERS = {}
 
 kiln: Kiln
 config: Config
-storage: Storage
+storage: dict[str, Storage]
+storage = {}
 
 # Two types of server are defined - one for static tiles, the other for live generated tiles.
 
@@ -39,14 +39,15 @@ live.add_middleware(CORSMiddleware,
 
 @server.on_event("startup")
 def load_server_config():
-    global config
+    '''Load the config for the server with static pre-rendered tiles'''
+    global config  # TODO: Refactor away config
     global storage
-    config = tilekiln.load_config(os.environ[TILEKILN_CONFIG])
 
     # Because the DB connection variables are passed as standard PG* vars,
     # a plain ConnectionPool() will connect to the right DB
     pool = psycopg_pool.NullConnectionPool()
-    storage = Storage(config, pool)
+
+    storage = Storage(None, pool, None)
 
 
 @live.on_event("startup")
@@ -76,7 +77,7 @@ def load_live_config():
         storage_args["username"] = os.environ["STORAGE_PGUSER"]
 
     storage_pool = psycopg_pool.NullConnectionPool(kwargs=storage_args)
-    storage = Storage(config, storage_pool)
+    storage = Storage(config, storage_pool, None)
 
     conn = psycopg.connect(**generate_args)
     global kiln
@@ -99,31 +100,48 @@ def favicon():
     return Response("")
 
 
-@server.head("/tilejson.json")
-@server.get("/tilejson.json")
-@live.head("/tilejson.json")
-@live.get("/tilejson.json")
-def tilejson():
-    global config
-    return Response(content=config.tilejson(os.environ[TILEKILN_URL]),
+@server.head("/{prefix}/tilejson.json")
+@server.get("/{prefix}/tilejson.json")
+def tilejson(prefix: str):
+    global storage
+    if prefix != storage.id:
+        raise HTTPException(status_code=404, detail=f'''Tileset {prefix} not found on server.''')
+    return Response(content=storage[prefix].tilejson(os.environ[TILEKILN_URL]),
                     media_type="application/json",
                     headers=STANDARD_HEADERS)
 
 
-@server.head(TILE_PREFIX + "/{zoom}/{x}/{y}.mvt")
-@server.get(TILE_PREFIX + "/{zoom}/{x}/{y}.mvt")
-def serve_tile(zoom: int, x: int, y: int):
+@live.head("/{prefix}/tilejson.json")
+@live.get("/{prefix}/tilejson.json")
+def live_tilejson(prefix: str):
+    global config
+    if prefix != storage.id:
+        raise HTTPException(status_code=404, detail=f'''Tileset {prefix} not found on server.''')
+    return Response(content=storage.tilejson(os.environ[TILEKILN_URL]),
+                    media_type="application/json",
+                    headers=STANDARD_HEADERS)
+
+
+@server.head("/{prefix}/{zoom}/{x}/{y}.mvt")
+@server.get("/{prefix}/{zoom}/{x}/{y}.mvt")
+def serve_tile(prefix: str, zoom: int, x: int, y: int):
     global storage
-    return Response(storage.get_tile(Tile(zoom, x, y)),
+    if prefix != storage.id:
+        raise HTTPException(status_code=404, detail=f"Tileset {prefix} not found on server.")
+
+    return Response(storage[prefix].get_tile(Tile(zoom, x, y)),
                     media_type="application/vnd.mapbox-vector-tile",
                     headers=STANDARD_HEADERS)
 
 
-@live.head(TILE_PREFIX + "/{zoom}/{x}/{y}.mvt")
-@live.get(TILE_PREFIX + "/{zoom}/{x}/{y}.mvt")
-def live_serve_tile(zoom: int, x: int, y:  int):
-    tile = Tile(zoom, x, y)
+@live.head("/{prefix}/{zoom}/{x}/{y}.mvt")
+@live.get("/{prefix}/{zoom}/{x}/{y}.mvt")
+def live_serve_tile(prefix: str, zoom: int, x: int, y:  int):
     global storage
+    if prefix != storage.id:
+        raise HTTPException(status_code=404, detail=f"Tileset {prefix} not found on server.")
+
+    tile = Tile(zoom, x, y)
     existing = storage.get_tile(tile)
 
     # Handle storage hits

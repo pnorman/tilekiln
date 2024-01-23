@@ -34,7 +34,7 @@ class Config:
         '''Returns a TileJSON'''
 
         result = {"tilejson": "3.0.0",
-                  "tiles": [url + "/{z}/{x}/{y}.mvt"],
+                  "tiles": [f"{url}/{self.id}" + "/{z}/{x}/{y}.mvt"],
                   "attribution": self.attribution,
                   "bounds": self.bounds,
                   "center": self.center,

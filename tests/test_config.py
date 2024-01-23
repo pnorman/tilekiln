@@ -25,7 +25,7 @@ class TestConfig(TestCase):
     "scheme": "xyz",
     "tilejson": "3.0.0",
     "tiles": [
-        "bar/{z}/{x}/{y}.mvt"
+        "bar/foo/{z}/{x}/{y}.mvt"
     ],
     "vector_layers": []
 }''')
@@ -74,7 +74,7 @@ class TestConfig(TestCase):
     "scheme": "xyz",
     "tilejson": "3.0.0",
     "tiles": [
-        "foo/{z}/{x}/{y}.mvt"
+        "foo/id/{z}/{x}/{y}.mvt"
     ],
     "vector_layers": [
         {
@@ -122,7 +122,7 @@ class TestConfig(TestCase):
     "scheme": "xyz",
     "tilejson": "3.0.0",
     "tiles": [
-        "foo/{z}/{x}/{y}.mvt"
+        "foo/id/{z}/{x}/{y}.mvt"
     ],
     "vector_layers": [
         {

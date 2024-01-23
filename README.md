@@ -24,9 +24,13 @@ Tilekiln requires a PostGIS database with data loaded to generate vector tiles.
 Tilekiln commands can be broken into two sets, commands which involve serving tiles, and CLI commands. Command-line options can be found with `--help`.
 
 ### CLI commands
+These commands will do something, then exit.
 
 #### `config`
 Commands to work with and check config files
+
+#### `generate`
+Commands for tile generation
 
 #### `sql`
 Prints the SQL for a tile
@@ -34,20 +38,54 @@ Prints the SQL for a tile
 #### `storage`
 Commands working with tile storage
 
-#### `generate`
-Commands for tile generation
-
 ### Serving commands
 These commands start a HTTP server to serve content.
 
 #### `dev`
-Starts a server to live-render tiles with no caching, intended for development.
+Starts a server to live-render tiles with no caching, intended for development. It presents a tilejson at `/<id>/tilejson.json`, and for convience `/tilejson.json` redirects to it.
+
+#### `live`
+Like `serve`, but fall back to live generation if a tile is missing from storage.
+
+It presents a tilejson at `/<id>/tilejson.json`.
 
 #### `serve`
 Serves tiles from tile storage. This is highly scalable and the preferred mode for production.
 
-#### `live`
-Like `serve`, but fall back to live generation if a tile is missing from storage.
+It presents a tilejson at `/<id>/tilejson.json`. In the future it will allow serving multiple tilesets.
+
+## Quick-start
+These instructions give you a setup based on osm2pgsql-themepark and their shortbread setup. They assume you have PostgreSQL with PostGIS and Python 3.10+ with venv set up, and a recent version of osm2pgsql.
+
+### Install and setup
+
+```sh
+git clone https://github.com/osm2pgsql-dev/osm2pgsql-themepark.git
+python3 -m venv tilekiln
+tilekiln/bin/pip install tilekiln
+createdb flex
+psql -d flex -c 'CREATE EXTENSION postgis;'
+createdb tiles
+```
+
+### Loading data
+We have to produce a tilekiln config from the osm2pgsql-themepark config. This requires uncommenting a line in the config.
+
+```sh
+sed -i -E -e "s/--.*(themepark:plugin\('tilekiln'\):write_config\('tk'\))/\1/" ./osm2pgsql-themepark/config/shortbread_gen.lua
+LUA_PATH="./osm2pgsql-themepark/lua/?.lua;;" osm2pgsql -d flex -O flex -S ./osm2pgsql-themepark/config/shortbread_gen.lua osm-data.pbf --cache 7000
+LUA_PATH="./osm2pgsql-themepark/lua/?.lua;;" osm2pgsql-gen -d flex -S ./osm2pgsql-themepark/config/shortbread_gen.lua -j 8
+mkdir -p downloads
+osm2pgsql-themepark/themes/external/download-and-import.sh ./downloads flex oceans ocean
+```
+
+### Serve some tiles
+
+```sh
+tilekiln/bin/tilekiln dev
+```
+
+Use the tilejson URL `http://127.0.0.1:8000/tilejson.json` to load tiles into your preferred tile viewer such as QGIS.
 
 ## History
 The tilekiln configuration syntax is based on studies and experience with other vector tile and map generation configurations. In particular, it is heavily inspired by Tilezen's use of Jinja2 templates and TileJSON for necessary metadata.
