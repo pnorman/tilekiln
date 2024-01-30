@@ -10,6 +10,9 @@ REGISTRY.unregister(prometheus_client.GC_COLLECTOR)
 REGISTRY.unregister(prometheus_client.PLATFORM_COLLECTOR)
 REGISTRY.unregister(prometheus_client.PROCESS_COLLECTOR)
 
+# Don't auto-create metrics for when the metric was created
+prometheus_client.disable_created_metrics()
+
 
 class TilekilnCollector(Collector):
     def __init__(self, storage: Storage):
@@ -44,6 +47,20 @@ class TilekilnCollector(Collector):
         pass
 
 
+METRIC_UPDATE_TIME = prometheus_client.Summary('tilekiln_metrics_storage_seconds',
+                                               'Time spent updating metrics')
+
+
+@METRIC_UPDATE_TIME.time()
+def monitored_update_metrics(storage: Storage):
+    '''Update storage metrics while tracking call time
+
+    The easiest way to monitor a function is to annotate it. Rather than require
+    prometheus in storage.py, we wrap it and annotate the wrapper to track call time.
+    '''
+    storage.update_metrics()
+
+
 def serve_prometheus(storage: Storage, addr, port, sleep):
     '''Start a prometheus server for storage info.'''
     collector = TilekilnCollector(storage)
@@ -52,5 +69,5 @@ def serve_prometheus(storage: Storage, addr, port, sleep):
     prometheus_client.start_http_server(port=port, addr=addr)
     while True:
         # TODO: Time this with prometheus
-        storage.update_metrics()
+        monitored_update_metrics(storage)
         time.sleep(sleep)
