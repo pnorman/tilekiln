@@ -137,18 +137,18 @@ class Storage:
         with self.__pool.connection() as conn:
             with conn.cursor() as cur:
                 if zooms is None:
-                    for z in range(self.minzoom, self.maxzoom+1):
-                        self.__truncate_table(z, cur)
+                    for zoom in range(self.minzoom, self.maxzoom+1):
+                        self.__truncate_table(zoom, cur)
                 else:
-                    for z in zooms:
-                        self.__truncate_table(z, cur)
+                    for zoom in zooms:
+                        self.__truncate_table(zoom, cur)
                 conn.commit()
 
     def get_tile(self, tile):
         with self.__pool.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(f'''SELECT tile FROM "{self.__schema}"."{self.id}"
-                                WHERE z = %s AND x = %s AND y = %s''',
+                                WHERE zoom = %s AND x = %s AND y = %s''',
                             (tile.zoom, tile.x, tile.y), binary=True)
                 result = cur.fetchone()
                 if result is None:
@@ -227,17 +227,17 @@ class Storage:
         does not try to overwrite existing tables.
         '''
         cur.execute(f'''CREATE TABLE "{self.__schema}"."{self.id}" (
-                    z smallint CHECK (z >= {self.minzoom} AND z <= {self.maxzoom}),
-                    x int CHECK (x >= 0 AND x < 1 << z),
-                    y int CHECK (x >= 0 AND x < 1 << z),
+                    zoom smallint CHECK (zoom >= {self.minzoom} AND zoom <= {self.maxzoom}),
+                    x int CHECK (x >= 0 AND x < 1 << zoom),
+                    y int CHECK (x >= 0 AND x < 1 << zoom),
                     tile bytea NOT NULL,
-                    primary key (z, x, y)
-                    ) PARTITION BY LIST (z)''')
-        for z in range(self.minzoom, self.maxzoom+1):
-            tablename = f"{self.id}_z{z}"
+                    primary key (zoom, x, y)
+                    ) PARTITION BY LIST (zoom)''')
+        for zoom in range(self.minzoom, self.maxzoom+1):
+            tablename = f"{self.id}_z{zoom}"
             cur.execute(f'''CREATE TABLE "{self.__schema}"."{tablename}"
                             PARTITION OF "{self.__schema}"."{self.id}"
-                            FOR VALUES IN ({z})''')
+                            FOR VALUES IN ({zoom})''')
             # tile is already compressed, so tell postgres to not compress it again
             cur.execute(f'''ALTER TABLE "{self.__schema}"."{tablename}"
                             ALTER COLUMN tile SET STORAGE EXTERNAL''')
@@ -278,13 +278,13 @@ class Storage:
         the latter case is not implemented but would take min/max x/y.
         '''
         cur.execute(f'''DELETE FROM "{self.__schema}"."{self.id}"
-                        WHERE z = %s AND x = %s AND y = %s''',
+                        WHERE zoom = %s AND x = %s AND y = %s''',
                     (tile.zoom, tile.x, tile.y))
 
     def __write_to_storage(self, tile: Tile, tiledata, cur):
         tablename = f"{self.id}_z{tile.zoom}"
-        cur.execute(f'''INSERT INTO "{self.__schema}"."{tablename}" (z, x, y, tile)
+        cur.execute(f'''INSERT INTO "{self.__schema}"."{tablename}" (zoom, x, y, tile)
 VALUES (%s, %s, %s, %s)
-ON CONFLICT (z, x, y)
+ON CONFLICT (zoom, x, y)
 DO UPDATE SET tile = EXCLUDED.tile''',
                     (tile.zoom, tile.x, tile.y, tiledata))
