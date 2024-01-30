@@ -96,9 +96,14 @@ class Storage:
                     # no rows, which is a problem. One option would be to save
                     # {{}, {}} as the array but 2-d empty arrays don't really work
                     # in PostgreSQL. Instead, we return 0 for all metrics.
+                    #
+                    # We set jit to ON as it is faster when the tables are large, but
+                    # jit is commonly disabled on tile rendering servers because it
+                    # slows down rendering queries.
                     # TODO: Consider if it would be better to completely skip the row
                     #       and emit no metric.
                     # TODO: Reformat this statement to be better with line breaks
+                    cur.execute('SET LOCAL jit TO ON;')
                     cur.execute(f'''INSERT INTO "{self.__schema}"."{TILE_STATS_TABLE}"
                                 SELECT
                                     %(id)s AS id,
