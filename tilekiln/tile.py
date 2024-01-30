@@ -1,3 +1,5 @@
+
+# TODO: Add dataclass
 class Tile:
     def __init__(self, zoom: int, x: int, y: int):
         '''Creates a tile object, with x, y, and zoom

@@ -12,6 +12,12 @@ import psycopg_pool
 import os
 
 
+# Allocated as per https://github.com/prometheus/prometheus/wiki/Default-port-allocations
+PROMETHEUS_PORT = 10013
+
+
+# TODO: Refactor this into one file per group
+
 @click.group()
 def cli():
     pass
@@ -149,7 +155,7 @@ def live(config, bind_host, bind_port, num_threads,
 
 
 @cli.command()
-@click.option('--config', type=click.Path(exists=True))  # TODO: make this optional
+@click.option('--config', type=click.Path(exists=True))
 @click.option('--bind-host', default='127.0.0.1', show_default=True,
               help='Bind socket to this host. ')
 @click.option('--bind-port', default=8000, show_default=True,
@@ -345,3 +351,31 @@ def tiles(config, num_threads, dbname, host, port, username,
     for tile in tiles:
         mvt = kiln.render(tile)
         storage.save_tile(tile, mvt)
+
+
+@cli.command()
+@click.option('--bind-host', default='0.0.0.0', show_default=True,
+              help='Bind socket to this host. ')
+@click.option('--bind-port', default=PROMETHEUS_PORT, show_default=True,
+              type=click.INT, help='Bind socket to this port.')
+@click.option('--storage-dbname')
+@click.option('--storage-host')
+@click.option('--storage-port')
+@click.option('--storage-username')
+# TODO: remove on storage refactor
+@click.option('--id', help='Override YAML config ID', required=True)
+def prometheus(bind_host, bind_port,
+               storage_dbname, storage_host, storage_port, storage_username, id):
+    ''' Run a prometheus exporter which can be accessed for gathering metrics
+        on stored tiles. '''
+    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
+                                                   "host": storage_host,
+                                                   "port": storage_port,
+                                                   "user": storage_username})
+    storage = Storage(None, pool, id)
+    # tilekiln.prometheus brings in a bunch of stuff, so only do this
+    # for this command
+    from tilekiln.prometheus import serve_prometheus
+    # TODO: make sleep a parameter
+    click.echo(f'Running prometheus exporter on http://{bind_host}:{bind_port}/')
+    serve_prometheus(storage, bind_host, bind_port, 15)

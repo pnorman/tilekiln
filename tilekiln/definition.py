@@ -18,6 +18,7 @@ class Definition:
         self.extent = definition_yaml.get("extent", DEFAULT_EXTENT)
         self.buffer = definition_yaml.get("buffer", DEFAULT_BUFFER)
 
+        # TODO: Let is use directories so one file can include others.
         self.__template = j2Environment.from_string(filesystem.readtext(definition_yaml["file"]))
 
     def render_sql(self, tile):
