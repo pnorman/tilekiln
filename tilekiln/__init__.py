@@ -1,9 +1,11 @@
-import tilekiln.config
-import fs.osfs
-
 import os
 
+import fs.osfs
 
+import tilekiln.config
+
+
+# TODO: Put somewhere else
 def load_config(path):
     '''Loads a config from the filesystem, given a path'''
 

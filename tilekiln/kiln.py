@@ -1,13 +1,14 @@
-'''
-The kiln is what actually generates the tiles, using the config to compute SQL,
-and a DB connection to execute it
-'''
+import psycopg
+
 from tilekiln.config import Config
 from tilekiln.tile import Tile
-import psycopg
 
 
 class Kiln:
+    '''
+    The kiln is what actually generates the tiles, using the config to compute SQL,
+    and a DB connection to execute it
+    '''
     def __init__(self, config: Config, connection: psycopg.Connection):
         self.__config = config
         self.__connection = connection

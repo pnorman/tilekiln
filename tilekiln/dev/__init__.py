@@ -1,12 +1,14 @@
+import os
+
+import psycopg
 from fastapi import FastAPI, Response, HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
+
 import tilekiln
 from tilekiln.kiln import Kiln
 from tilekiln.config import Config
 from tilekiln.tile import Tile
-import os
-import psycopg
 
 
 # Constants for environment variable names

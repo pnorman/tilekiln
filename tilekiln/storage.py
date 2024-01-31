@@ -1,14 +1,15 @@
-
-from tilekiln.config import Config
-from tilekiln.tile import Tile
-from tilekiln.metric import Metric
-from psycopg_pool import ConnectionPool
-import psycopg.rows
-import click
 import sys
 import gzip
 import json
 from collections.abc import Iterator
+
+import click
+import psycopg.rows
+from psycopg_pool import ConnectionPool
+
+from tilekiln.config import Config
+from tilekiln.metric import Metric
+from tilekiln.tile import Tile
 
 METADATA_TABLE = "metadata"
 GENERATE_STATS_TABLE = "generate_stats"

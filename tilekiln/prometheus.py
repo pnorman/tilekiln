@@ -1,8 +1,10 @@
-import prometheus_client
-from tilekiln.storage import Storage
 import time
+
+import prometheus_client
 from prometheus_client.registry import Collector
 from prometheus_client.core import GaugeMetricFamily, REGISTRY
+
+from tilekiln.storage import Storage
 
 # Disable default metrics since we're not monitoring this process, we're monitoring
 # the DB sizes

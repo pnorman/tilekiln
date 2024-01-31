@@ -1,5 +1,7 @@
 from unittest import TestCase
+
 from fs.memoryfs import MemoryFS
+
 from tilekiln.definition import Definition
 from tilekiln.tile import Tile
 

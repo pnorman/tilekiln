@@ -1,15 +1,17 @@
-import click
-import tilekiln
-from tilekiln.tile import Tile
+import os
 import sys
-import tilekiln.dev
-import tilekiln.server
-from tilekiln.storage import Storage
-from tilekiln.kiln import Kiln
-import uvicorn
+
+import click
 import psycopg
 import psycopg_pool
-import os
+import uvicorn
+
+import tilekiln
+import tilekiln.dev
+import tilekiln.server
+from tilekiln.tile import Tile
+from tilekiln.storage import Storage
+from tilekiln.kiln import Kiln
 
 
 # Allocated as per https://github.com/prometheus/prometheus/wiki/Default-port-allocations

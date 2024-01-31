@@ -1,8 +1,10 @@
+import yaml
 from unittest import TestCase
+
 from fs.memoryfs import MemoryFS
+
 from tilekiln.config import Config, LayerConfig
 from tilekiln.tile import Tile
-import yaml
 
 
 class TestConfig(TestCase):

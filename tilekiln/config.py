@@ -1,5 +1,6 @@
-import yaml
 import json
+import yaml
+
 from tilekiln.definition import Definition
 from tilekiln.tile import Tile
 
