@@ -31,7 +31,7 @@ class Config:
             self.minzoom = min([layer.minzoom for layer in self.layers])
             self.maxzoom = max([layer.maxzoom for layer in self.layers])
 
-    def tilejson(self, url):
+    def tilejson(self, url) -> str:
         '''Returns a TileJSON'''
 
         result = {"tilejson": "3.0.0",

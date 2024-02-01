@@ -1,3 +1,4 @@
+import json
 import os
 
 import psycopg
@@ -9,8 +10,11 @@ import tilekiln
 from tilekiln.config import Config
 from tilekiln.kiln import Kiln
 from tilekiln.tile import Tile
+from tilekiln.tileset import Tileset
 from tilekiln.storage import Storage
 
+# Constants for MVTs
+MVT_MIME_TYPE = "application/vnd.mapbox-vector-tile"
 
 # Constants for environment variable names
 # Passing around enviornment variables really is the best way to get this to fastapi
@@ -18,12 +22,12 @@ TILEKILN_CONFIG = "TILEKILN_CONFIG"
 TILEKILN_URL = "TILEKILN_URL"
 TILEKILN_THREADS = "TILEKILN_THREADS"
 
-STANDARD_HEADERS = {}
+STANDARD_HEADERS: dict[str, str] = {}
 
 kiln: Kiln
 config: Config
-storage: dict[str, Storage]
-storage = {}
+storage: Storage
+tilesets: dict[str, Tileset] = {}
 
 # Two types of server are defined - one for static tiles, the other for live generated tiles.
 
@@ -39,23 +43,32 @@ live.add_middleware(CORSMiddleware,
                     allow_headers=["*"])
 
 
+# TODO: Move elsewhere
+def change_tilejson_url(tilejson: str, baseurl: str) -> str:
+    modified_tilejson = json.loads(tilejson)
+    modified_tilejson["tiles"] = [baseurl + "/{z}/{x}/{y}.mvt"]
+    return json.dumps(modified_tilejson)
+
+
 @server.on_event("startup")
 def load_server_config():
     '''Load the config for the server with static pre-rendered tiles'''
-    global config  # TODO: Refactor away config
     global storage
-
+    global tilesets
     # Because the DB connection variables are passed as standard PG* vars,
     # a plain ConnectionPool() will connect to the right DB
     pool = psycopg_pool.NullConnectionPool()
 
-    storage = Storage(None, pool, None)
+    storage = Storage(pool)
+    for tileset in storage.get_tilesets():
+        tilesets[tileset.id] = tileset
 
 
 @live.on_event("startup")
 def load_live_config():
     global config
     global storage
+    global tilesets
     config = tilekiln.load_config(os.environ[TILEKILN_CONFIG])
 
     generate_args = {}
@@ -79,8 +92,10 @@ def load_live_config():
         storage_args["username"] = os.environ["STORAGE_PGUSER"]
 
     storage_pool = psycopg_pool.NullConnectionPool(kwargs=storage_args)
-    storage = Storage(config, storage_pool, None)
+    storage = Storage(storage_pool)
 
+    # Storing the tileset in the dict allows some commonalities in code later
+    tilesets[config.id] = Tileset.from_config(storage, config)
     conn = psycopg.connect(**generate_args)
     global kiln
     kiln = Kiln(config, conn)
@@ -104,22 +119,14 @@ def favicon():
 
 @server.head("/{prefix}/tilejson.json")
 @server.get("/{prefix}/tilejson.json")
-def tilejson(prefix: str):
-    global storage
-    if prefix != storage.id:
-        raise HTTPException(status_code=404, detail=f'''Tileset {prefix} not found on server.''')
-    return Response(content=storage[prefix].tilejson(os.environ[TILEKILN_URL]),
-                    media_type="application/json",
-                    headers=STANDARD_HEADERS)
-
-
 @live.head("/{prefix}/tilejson.json")
 @live.get("/{prefix}/tilejson.json")
-def live_tilejson(prefix: str):
-    global config
-    if prefix != storage.id:
+def tilejson(prefix: str):
+    global tilesets
+    if prefix not in tilesets:
         raise HTTPException(status_code=404, detail=f'''Tileset {prefix} not found on server.''')
-    return Response(content=storage.tilejson(os.environ[TILEKILN_URL]),
+    return Response(content=change_tilejson_url(tilesets[prefix].tilejson,
+                                                os.environ[TILEKILN_URL] + f"/{prefix}"),
                     media_type="application/json",
                     headers=STANDARD_HEADERS)
 
@@ -127,36 +134,37 @@ def live_tilejson(prefix: str):
 @server.head("/{prefix}/{zoom}/{x}/{y}.mvt")
 @server.get("/{prefix}/{zoom}/{x}/{y}.mvt")
 def serve_tile(prefix: str, zoom: int, x: int, y: int):
-    global storage
-    if prefix != storage.id:
+    global tilesets
+    if prefix not in tilesets:
         raise HTTPException(status_code=404, detail=f"Tileset {prefix} not found on server.")
 
-    return Response(storage[prefix].get_tile(Tile(zoom, x, y)),
-                    media_type="application/vnd.mapbox-vector-tile",
+    return Response(tilesets[prefix].get_tile(Tile(zoom, x, y)),
+                    media_type=MVT_MIME_TYPE,
                     headers=STANDARD_HEADERS)
 
 
 @live.head("/{prefix}/{zoom}/{x}/{y}.mvt")
 @live.get("/{prefix}/{zoom}/{x}/{y}.mvt")
 def live_serve_tile(prefix: str, zoom: int, x: int, y:  int):
-    global storage
-    if prefix != storage.id:
+    global tilesets
+    if prefix not in tilesets:
         raise HTTPException(status_code=404, detail=f"Tileset {prefix} not found on server.")
 
-    tile = Tile(zoom, x, y)
-    existing = storage.get_tile(tile)
+    # Attempt to serve a stored tile
+    existing = tilesets[prefix].get_tile(Tile(zoom, x, y))
 
     # Handle storage hits
     if existing is not None:
         return Response(existing,
-                        media_type="application/vnd.mapbox-vector-tile",
+                        media_type=MVT_MIME_TYPE,
                         headers=STANDARD_HEADERS)
 
     # Storage miss, so generate a new tile
     global kiln
+    tile = Tile(zoom, x, y)
     generated = kiln.render(tile)
-    # TODO: Make async
-    storage.save_tile(tile, generated)
+    # TODO: Make async so tile is saved and response returned in parallel
+    tilesets[prefix].save_tile(tile, generated)
     return Response(generated,
-                    media_type="application/vnd.mapbox-vector-tile",
+                    media_type=MVT_MIME_TYPE,
                     headers=STANDARD_HEADERS)

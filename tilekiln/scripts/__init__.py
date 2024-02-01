@@ -10,6 +10,7 @@ import tilekiln
 import tilekiln.dev
 import tilekiln.server
 from tilekiln.tile import Tile
+from tilekiln.tileset import Tileset
 from tilekiln.storage import Storage
 from tilekiln.kiln import Kiln
 
@@ -220,8 +221,10 @@ def init(config, storage_dbname, storage_host, storage_port, storage_username, i
                                                    "host": storage_host,
                                                    "port": storage_port,
                                                    "user": storage_username})
-    storage = Storage(c, pool, id)
-    storage.create_tables()
+    storage = Storage(pool)
+    storage.create_schema()
+    tileset = Tileset.from_config(storage, c)
+    tileset.prepare_storage()
     pool.close()
 
 
