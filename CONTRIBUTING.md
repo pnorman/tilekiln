@@ -30,6 +30,7 @@ Make sure to run pre-commit checks so that your PR won't fail in CI
 
 ```sh
 flake8 tilekiln tests
+mypy tilekiln tests
 pytest
 ```
 
