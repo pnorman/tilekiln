@@ -158,7 +158,6 @@ def live(config, bind_host, bind_port, num_threads,
 
 
 @cli.command()
-@click.option('--config', type=click.Path(exists=True))
 @click.option('--bind-host', default='127.0.0.1', show_default=True,
               help='Bind socket to this host. ')
 @click.option('--bind-port', default=8000, show_default=True,
@@ -171,17 +170,11 @@ def live(config, bind_host, bind_port, num_threads,
 @click.option('--storage-username')
 @click.option('--base-url', help='Defaults to http://127.0.0.1:8000' +
               ' or the bind host and port')
-@click.option('--id', help='Override YAML config ID')
-def serve(config, bind_host, bind_port, num_threads,
-          storage_dbname, storage_host, storage_port, storage_username, base_url, id):
+def serve(bind_host, bind_port, num_threads,
+          storage_dbname, storage_host, storage_port, storage_username, base_url):
     '''Starts a server for pre-generated tiles from DB'''
 
-    if config is None and id is None:
-        raise click.UsageError('''Missing one of '--id' or '--config' options''')
-
     os.environ[tilekiln.server.TILEKILN_THREADS] = str(num_threads)
-    # If id is not specified, we know the config is from above, so get the id from it
-    os.environ[tilekiln.server.TILEKILN_ID] = id or tilekiln.load_config(config).id
 
     if base_url is not None:
         os.environ[tilekiln.dev.TILEKILN_URL] = base_url
