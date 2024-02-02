@@ -57,7 +57,7 @@ def load_server_config():
     global tilesets
     # Because the DB connection variables are passed as standard PG* vars,
     # a plain ConnectionPool() will connect to the right DB
-    pool = psycopg_pool.NullConnectionPool()
+    pool = psycopg_pool.ConnectionPool(min_size=1, max_size=1)
 
     storage = Storage(pool)
     for tileset in storage.get_tilesets():
@@ -91,7 +91,7 @@ def load_live_config():
     if "STORAGE_PGUSER" in os.environ:
         storage_args["username"] = os.environ["STORAGE_PGUSER"]
 
-    storage_pool = psycopg_pool.NullConnectionPool(kwargs=storage_args)
+    storage_pool = psycopg_pool.ConnectionPool(min_size=1, max_size=1, kwargs=storage_args)
     storage = Storage(storage_pool)
 
     # Storing the tileset in the dict allows some commonalities in code later
