@@ -94,7 +94,7 @@ The tilekiln configuration syntax is based on studies and experience with other 
 
 ### Code
 
-Copyright © 2022-2023 Paul Norman <osm@paulnorman.ca>
+Copyright © 2022-2024 Paul Norman <osm@paulnorman.ca>
 
 The code is licensed terms of the GNU General Public License as
 published by the Free Software Foundation, either version 3 of
