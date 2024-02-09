@@ -1,5 +1,6 @@
-import sys
 import gzip
+import json
+import sys
 from collections.abc import Iterator
 
 import click
@@ -76,8 +77,8 @@ class Storage:
                 cur.execute(f'''SELECT id, minzoom, maxzoom, tilejson
                              FROM "{self.__schema}"."{METADATA_TABLE}"''')
                 for record in cur:
-                    yield Tileset(self, record["id"],
-                                  record["minzoom"], record["maxzoom"], record["tilejson"])
+                    yield Tileset(self, record["id"], record["minzoom"], record["maxzoom"],
+                                  json.dumps(record["tilejson"]))
 
     def get_tileset_ids(self) -> Iterator[str]:
         '''
@@ -124,7 +125,7 @@ class Storage:
 
     # TODO: Should the various get_* functions be separate? The query has to fetch from the
     # DB each time, but only tilejson needs URL. Not an urgent issue.
-    def get_tilejson(self, id, url):
+    def get_tilejson(self, id, url) -> str:
         '''Gets the tilejson for a layer from storage.'''
         with self.__pool.connection() as conn:
             conn.read_only = True
@@ -141,6 +142,7 @@ class Storage:
                     sys.exit(1)
                 tilejson = result["tilejson"]
                 tilejson["tiles"] = [f"{url}" + "/{z}/{x}/{y}.mvt"]
+                return json.dumps(tilejson)
 
     def get_minzoom(self, id):
         '''Gets the minzoom for a layer from storage.'''
@@ -174,7 +176,7 @@ class Storage:
                                f"does it exist in storage DB?",
                                err=True)
                     sys.exit(1)
-                return result["minzoom"]
+                return result["maxzoom"]
 
     '''
     Methods that involve saving, fetching, and deleting tiles
@@ -183,10 +185,10 @@ class Storage:
         with self.__pool.connection() as conn:
             with conn.cursor() as cur:
                 for tile in tiles:
-                    self.__delete_tile(tile, id, cur)
+                    self.__delete_tile(cur, id, tile)
             conn.commit()
 
-    def truncate_tables(self, id: str, zooms):
+    def truncate_tables(self, id: str, zooms=None):
         with self.__pool.connection() as conn:
             with conn.cursor() as cur:
                 if zooms is None:
@@ -355,7 +357,7 @@ class Storage:
         tablename = f"{id}_z{zoom}"
         cur.execute(f'''TRUNCATE TABLE "{self.__schema}"."{tablename}"''')
 
-    def __delete_tile(self, id, tile, cur):
+    def __delete_tile(self, cur, id: str, tile: Tile):
         '''Delete an individual tile
 
         How this is implemented is not ideal for long lists of tiles
@@ -364,7 +366,7 @@ class Storage:
         In the former case it is implemented as __truncate_table, and
         the latter case is not implemented but would take min/max x/y.
         '''
-        cur.execute(f'''DELETE FROM "{self.__schema}"."{self.id}"
+        cur.execute(f'''DELETE FROM "{self.__schema}"."{id}"
                         WHERE zoom = %s AND x = %s AND y = %s''',
                     (tile.zoom, tile.x, tile.y))
 

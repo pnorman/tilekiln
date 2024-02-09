@@ -78,14 +78,15 @@ def sql(config, layer, zoom, x, y):
               type=click.INT, help='Bind socket to this port.')
 @click.option('-n', '--num-threads', default=len(os.sched_getaffinity(0)),
               show_default=True, help='Number of worker processes.')
-@click.option('-d', '--dbname')
-@click.option('-h', '--host')
-@click.option('-p', '--port')
-@click.option('-U', '--username')
+@click.option('--source-dbname')
+@click.option('--source-host')
+@click.option('--source-port')
+@click.option('--source-username')
 @click.option('--base-url', help='Defaults to http://127.0.0.1:8000' +
               ' or the bind host and port')
 @click.option('--id', help='Override YAML config ID')
-def dev(config, bind_host, bind_port, num_threads, dbname, host, port, username, base_url, id):
+def dev(config, bind_host, bind_port, num_threads,
+        source_dbname, source_host, source_port, source_username, base_url, id):
     '''Starts a server for development
     '''
     os.environ[tilekiln.dev.TILEKILN_CONFIG] = config
@@ -95,14 +96,14 @@ def dev(config, bind_host, bind_port, num_threads, dbname, host, port, username,
         os.environ[tilekiln.dev.TILEKILN_URL] = base_url
     else:
         os.environ[tilekiln.dev.TILEKILN_URL] = (f"http://{bind_host}:{bind_port}")
-    if dbname is not None:
-        os.environ["PGDATABASE"] = dbname
-    if host is not None:
-        os.environ["PGHOST"] = host
-    if port is not None:
-        os.environ["PGPORT"] = port
-    if username is not None:
-        os.environ["PGUSER"] = username
+    if source_dbname is not None:
+        os.environ["PGDATABASE"] = source_dbname
+    if source_host is not None:
+        os.environ["PGHOST"] = source_host
+    if source_port is not None:
+        os.environ["PGPORT"] = source_port
+    if source_username is not None:
+        os.environ["PGUSER"] = source_username
 
     uvicorn.run("tilekiln.dev:dev", host=bind_host, port=bind_port, workers=num_threads)
 
@@ -115,10 +116,10 @@ def dev(config, bind_host, bind_port, num_threads, dbname, host, port, username,
               type=click.INT, help='Bind socket to this port.')
 @click.option('-n', '--num-threads', default=len(os.sched_getaffinity(0)),
               show_default=True, help='Number of worker processes.')
-@click.option('-d', '--dbname')
-@click.option('-h', '--host')
-@click.option('-p', '--port')
-@click.option('-U', '--username')
+@click.option('--source-dbname')
+@click.option('--source-host')
+@click.option('--source-port')
+@click.option('--source-username')
 @click.option('--storage-dbname')
 @click.option('--storage-host')
 @click.option('--storage-port')
@@ -126,7 +127,7 @@ def dev(config, bind_host, bind_port, num_threads, dbname, host, port, username,
 @click.option('--base-url', help='Defaults to http://127.0.0.1:8000' +
               ' or the bind host and port')
 def live(config, bind_host, bind_port, num_threads,
-         dbname, host, port, username,
+         source_dbname, source_host, source_port, source_username,
          storage_dbname, storage_host, storage_port, storage_username, base_url):
     '''Starts a server for pre-generated tiles from DB'''
     os.environ[tilekiln.server.TILEKILN_CONFIG] = config
@@ -136,14 +137,14 @@ def live(config, bind_host, bind_port, num_threads,
         os.environ[tilekiln.dev.TILEKILN_URL] = base_url
     else:
         os.environ[tilekiln.dev.TILEKILN_URL] = (f"http://{bind_host}:{bind_port}")
-    if dbname is not None:
-        os.environ["GENERATE_PGDATABASE"] = dbname
-    if host is not None:
-        os.environ["GENERATE_PGHOST"] = host
-    if port is not None:
-        os.environ["GENERATE_PGPORT"] = port
-    if username is not None:
-        os.environ["GENERATE_PGUSER"] = username
+    if source_dbname is not None:
+        os.environ["GENERATE_PGDATABASE"] = source_dbname
+    if source_host is not None:
+        os.environ["GENERATE_PGHOST"] = source_host
+    if source_port is not None:
+        os.environ["GENERATE_PGPORT"] = source_port
+    if source_username is not None:
+        os.environ["GENERATE_PGUSER"] = source_username
 
     if storage_dbname is not None:
         os.environ["STORAGE_PGDATABASE"] = storage_dbname
@@ -237,13 +238,14 @@ def destroy(config, storage_dbname, storage_host, storage_port, storage_username
     c = None
     if id is None:
         c = tilekiln.load_config(config)
+        id = c.id
 
     pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
                                                    "host": storage_host,
                                                    "port": storage_port,
                                                    "user": storage_username})
-    storage = Storage(c, pool, id)
-    storage.remove_tables()
+    storage = Storage(pool)
+    storage.remove_tileset(id)
     pool.close()
 
 
@@ -264,17 +266,18 @@ def delete(config, storage_dbname, storage_host, storage_port, storage_username,
     c = None
     if id is None:
         c = tilekiln.load_config(config)
+        id = c.id
 
     pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
                                                    "host": storage_host,
                                                    "port": storage_port,
                                                    "user": storage_username})
-    storage = Storage(c, pool, id)
+    storage = Storage(pool)
 
     if (zoom == ()):
-        storage.truncate_tables()
+        storage.truncate_tables(id)
     else:
-        storage.truncate_tables(zoom)
+        storage.truncate_tables(id, zoom)
 
     pool.close()
 
@@ -296,16 +299,19 @@ def tiledelete(config, storage_dbname, storage_host, storage_port, storage_usern
     c = None
     if id is None:
         c = tilekiln.load_config(config)
+        id = c.id
 
     pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
                                                    "host": storage_host,
                                                    "port": storage_port,
                                                    "user": storage_username})
-    storage = Storage(c, pool, id)
+    storage = Storage(pool)
 
+    # TODO: This requires reading all of stdin before starting. This lets it display
+    # how many tiles to delete but also means it has to read them all in before starting
     tiles = {Tile.from_string(t) for t in sys.stdin}
     click.echo(f"Deleting {len(tiles)} tiles")
-    storage.delete_tiles(tiles)
+    storage.delete_tiles(id, tiles)
 
 
 @cli.group()
@@ -318,15 +324,15 @@ def generate():
 @click.option('--config', required=True, type=click.Path(exists=True))
 @click.option('-n', '--num-threads', default=len(os.sched_getaffinity(0)),
               show_default=True, help='Number of worker processes.')
-@click.option('-d', '--dbname')
-@click.option('-h', '--host')
-@click.option('-p', '--port')
-@click.option('-U', '--username')
+@click.option('--source-dbname')
+@click.option('--source-host')
+@click.option('--source-port')
+@click.option('--source-username')
 @click.option('--storage-dbname')
 @click.option('--storage-host')
 @click.option('--storage-port')
 @click.option('--storage-username')
-def tiles(config, num_threads, dbname, host, port, username,
+def tiles(config, num_threads, source_dbname, source_host, source_port, source_username,
           storage_dbname, storage_host, storage_port, storage_username):
     '''Generate specific tiles.
        Pass a list of z/x/y to stdin to generate those tiles'''
@@ -342,13 +348,15 @@ def tiles(config, num_threads, dbname, host, port, username,
                                                    "host": storage_host,
                                                    "port": storage_port,
                                                    "user": storage_username})
-    storage = Storage(c, pool)
+    storage = Storage(pool)
 
-    gen_conn = psycopg.connect(dbname=dbname, host=host, port=port, username=username)
+    tileset = Tileset.from_config(storage, c)
+    gen_conn = psycopg.connect(dbname=source_dbname, host=source_host,
+                               port=source_port, username=source_username)
     kiln = Kiln(c, gen_conn)
     for tile in tiles:
         mvt = kiln.render(tile)
-        storage.save_tile(tile, mvt)
+        tileset.save_tile(tile, mvt)
 
 
 @cli.command()
@@ -360,17 +368,16 @@ def tiles(config, num_threads, dbname, host, port, username,
 @click.option('--storage-host')
 @click.option('--storage-port')
 @click.option('--storage-username')
-# TODO: remove on storage refactor
-@click.option('--id', help='Override YAML config ID', required=True)
 def prometheus(bind_host, bind_port,
-               storage_dbname, storage_host, storage_port, storage_username, id):
+               storage_dbname, storage_host, storage_port, storage_username):
     ''' Run a prometheus exporter which can be accessed for gathering metrics
         on stored tiles. '''
     pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
                                                    "host": storage_host,
                                                    "port": storage_port,
                                                    "user": storage_username})
-    storage = Storage(None, pool, id)
+    storage = Storage(pool)
+
     # tilekiln.prometheus brings in a bunch of stuff, so only do this
     # for this command
     from tilekiln.prometheus import serve_prometheus
