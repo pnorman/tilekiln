@@ -4,7 +4,6 @@ import os
 import psycopg
 import psycopg_pool
 from fastapi import FastAPI, Response, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 
 import tilekiln
 from tilekiln.config import Config
@@ -22,7 +21,8 @@ TILEKILN_CONFIG = "TILEKILN_CONFIG"
 TILEKILN_URL = "TILEKILN_URL"
 TILEKILN_THREADS = "TILEKILN_THREADS"
 
-STANDARD_HEADERS: dict[str, str] = {}
+STANDARD_HEADERS: dict[str, str] = {"Access-Control-Allow-Origin": "*",
+                                    "Access-Control-Allow-Methods": "GET, HEAD"}
 
 kiln: Kiln
 config: Config
@@ -30,17 +30,8 @@ storage: Storage
 tilesets: dict[str, Tileset] = {}
 
 # Two types of server are defined - one for static tiles, the other for live generated tiles.
-
 server = FastAPI()
-server.add_middleware(CORSMiddleware,
-                      allow_origins=["*"],
-                      allow_methods=["*"],
-                      allow_headers=["*"])
 live = FastAPI()
-live.add_middleware(CORSMiddleware,
-                    allow_origins=["*"],
-                    allow_methods=["*"],
-                    allow_headers=["*"])
 
 
 # TODO: Move elsewhere
