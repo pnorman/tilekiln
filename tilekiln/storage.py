@@ -315,10 +315,12 @@ class Storage:
         This creates the tile storage tables. It intentionally
         does not try to overwrite existing tables.
         '''
+        # These columns are ordered to minimize wasted space between columns
         cur.execute(f'''CREATE TABLE "{self.__schema}"."{id}" (
                     zoom smallint CHECK (zoom >= {minzoom} AND zoom <= {maxzoom}),
                     x int CHECK (x >= 0 AND x < 1 << zoom),
-                    y int CHECK (x >= 0 AND x < 1 << zoom),
+                    y int CHECK (y >= 0 AND y < 1 << zoom),
+                    generated timestamptz DEFAULT statement_timestamp(),
                     tile bytea NOT NULL,
                     primary key (zoom, x, y)
                     ) PARTITION BY LIST (zoom)''')
