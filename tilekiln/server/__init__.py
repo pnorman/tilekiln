@@ -171,7 +171,10 @@ def live_serve_tile(prefix: str, zoom: int, x: int, y:  int):
     tile = Tile(zoom, x, y)
     response = kiln.render(tile)
     # TODO: Make async so tile is saved and response returned in parallel
-    tilesets[prefix].save_tile(tile, response)
+    generated = tilesets[prefix].save_tile(tile, response)
+    if generated is not None:
+        headers = {"Last-Modified": generated.strftime(HTTP_TIME),
+                   "E-tag": generated.strftime("%s.%f")}
     return Response(response,
                     media_type=MVT_MIME_TYPE,
-                    headers=STANDARD_HEADERS)
+                    headers=STANDARD_HEADERS | headers)

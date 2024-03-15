@@ -211,10 +211,30 @@ class Storage:
                 return gzip.decompress(result["tile"]), result["generated"]
 
     # TODO: Needs to return timestamp written to the DB
-    def save_tile(self, id: str, tile: Tile, tiledata: bytes, render_time=0):
+    def save_tile(self, id: str, tile: Tile,
+                  tiledata: bytes, render_time=0) -> datetime.datetime | None:
         with self.__pool.connection() as conn:
-            with conn.cursor() as cur:
-                self.__write_to_storage(id, tile, gzip.compress(tiledata, mtime=0), cur)
+            conn.execute("SET TIMEZONE TO 'GMT'")
+            with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+                # TODO: This statement unconditionally writes the row even if it's unchanged. It
+                # shouldn't. Adding WHERE tile != EXCLUDED.tile would help, but then it would
+                # return zero rows if the contents are the same. The method here instead results
+                # in extra writes but does preserve the datetime.
+                tablename = f"{id}_z{tile.zoom}"
+                cur.execute(f'''INSERT INTO "{self.__schema}"."{tablename}" AS store
+(zoom, x, y, tile)
+VALUES (%s, %s, %s, %s)
+ON CONFLICT (zoom, x, y)
+DO UPDATE SET tile = EXCLUDED.tile,
+generated = CASE WHEN store.tile != EXCLUDED.tile
+    THEN statement_timestamp()
+    ELSE store.generated END
+RETURNING generated''',
+                            (tile.zoom, tile.x, tile.y, gzip.compress(tiledata, mtime=0)))
+                result = cur.fetchone()
+                if result is None:
+                    return None
+                return result["generated"]
 
     def __setup_metadata(self, cur):
         ''' Create the metadata table in storage. This is safe to rerun
@@ -374,13 +394,3 @@ class Storage:
         cur.execute(f'''DELETE FROM "{self.__schema}"."{id}"
                         WHERE zoom = %s AND x = %s AND y = %s''',
                     (tile.zoom, tile.x, tile.y))
-
-# TODO: The statement should compare to the existing value and if they are the same not
-# update in order to keep the last-modified header the same and improve caching.
-    def __write_to_storage(self, id, tile: Tile, tiledata, cur):
-        tablename = f"{id}_z{tile.zoom}"
-        cur.execute(f'''INSERT INTO "{self.__schema}"."{tablename}" (zoom, x, y, tile)
-VALUES (%s, %s, %s, %s)
-ON CONFLICT (zoom, x, y)
-DO UPDATE SET tile = EXCLUDED.tile''',
-                    (tile.zoom, tile.x, tile.y, tiledata))

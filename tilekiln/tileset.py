@@ -54,5 +54,5 @@ class Tileset:
     def get_tile(self, tile: Tile) -> tuple[bytes | None, datetime.datetime | None]:
         return self.storage.get_tile(self.id, tile)
 
-    def save_tile(self, tile: Tile, data: bytes) -> None:
-        self.storage.save_tile(self.id, tile, data)
+    def save_tile(self, tile: Tile, data: bytes) -> datetime.datetime | None:
+        return self.storage.save_tile(self.id, tile, data)
