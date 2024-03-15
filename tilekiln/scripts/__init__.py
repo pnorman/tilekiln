@@ -19,9 +19,14 @@ from tilekiln.kiln import Kiln
 PROMETHEUS_PORT = 10013
 
 
-# TODO: Refactor this into one file per group
+# We want click to print out commands in the order they are defined.
+class OrderCommands(click.Group):
+    def list_commands(self, ctx: click.Context) -> list[str]:
+        return list(self.commands)
 
-@click.group()
+
+# TODO: Refactor this into one file per group
+@click.group(cls=OrderCommands)
 def cli():
     pass
 
@@ -35,7 +40,12 @@ def config():
 @config.command()
 @click.option('--config', required=True, type=click.Path(exists=True))
 def test(config):
-    '''Tests a tilekiln config for validity and exits with exit code 0 if it is valid'''
+    '''Tests a config for validity.
+
+    The process will exit with exit code 0 if tilekiln can load the config.
+
+    This is intended for build and CI scripts used by configs.
+    '''
     tilekiln.load_config(config)
 
 
@@ -46,7 +56,11 @@ def test(config):
 @click.option('-x', type=click.INT, required=True)
 @click.option('-y', type=click.INT, required=True)
 def sql(config, layer, zoom, x, y):
-    '''Prints the SQL for a tile
+    '''Print the SQL for a tile or layer.
+
+    Prints the SQL that would be issued to generate a particular tile layer,
+    or if no layer is given, the entire tile. This allows manual debugging of
+    a tile query.
     '''
 
     c = tilekiln.load_config(config)
@@ -68,6 +82,192 @@ def sql(config, layer, zoom, x, y):
                 sys.exit(0)
         click.echo(f"Layer '{layer}' not found in configuration", err=True)
         sys.exit(1)
+
+
+@cli.group()
+def generate():
+    '''Commands for tile generation.
+
+    All tile generation commands run queries against the source database which has the
+    geospatial data
+    '''
+    pass
+
+
+@generate.command()
+@click.option('--config', required=True, type=click.Path(exists=True))
+@click.option('-n', '--num-threads', default=len(os.sched_getaffinity(0)),
+              show_default=True, help='Number of worker processes.')
+@click.option('--source-dbname')
+@click.option('--source-host')
+@click.option('--source-port')
+@click.option('--source-username')
+@click.option('--storage-dbname')
+@click.option('--storage-host')
+@click.option('--storage-port')
+@click.option('--storage-username')
+def tiles(config, num_threads, source_dbname, source_host, source_port, source_username,
+          storage_dbname, storage_host, storage_port, storage_username):
+    '''Generate specific tiles.
+
+    A list of z/x/y tiles is read from stdin and those tiles are generated and saved
+    to storage.
+    '''
+
+    c = tilekiln.load_config(config)
+
+    tiles = {Tile.from_string(t) for t in sys.stdin}
+    threads = min(num_threads, len(tiles))  # No point in more threads than tiles
+
+    click.echo(f"Rendering {len(tiles)} tiles over {threads} threads")
+
+    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
+                                                   "host": storage_host,
+                                                   "port": storage_port,
+                                                   "user": storage_username})
+    storage = Storage(pool)
+
+    tileset = Tileset.from_config(storage, c)
+    gen_conn = psycopg.connect(dbname=source_dbname, host=source_host,
+                               port=source_port, username=source_username)
+    kiln = Kiln(c, gen_conn)
+    for tile in tiles:
+        mvt = kiln.render(tile)
+        tileset.save_tile(tile, mvt)
+
+
+@cli.group()
+def storage():
+    '''Commands working with tile storage.
+
+    These commands allow creation and manipulation of the tile storage database.
+    '''
+    pass
+
+
+@storage.command()
+@click.option('--config', required=True, type=click.Path(exists=True))
+@click.option('--storage-dbname')
+@click.option('--storage-host')
+@click.option('--storage-port')
+@click.option('--storage-username')
+@click.option('--id', help='Override YAML config ID')
+def init(config, storage_dbname, storage_host, storage_port, storage_username, id):
+    '''Initialize storage for tiles.
+
+    Creates the storage for a tile layer and stores its metadata in the database.
+    If the metadata tables have not yet been created they will also be setup.
+    '''
+
+    c = tilekiln.load_config(config)
+
+    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
+                                                   "host": storage_host,
+                                                   "port": storage_port,
+                                                   "user": storage_username})
+    storage = Storage(pool)
+    storage.create_schema()
+    tileset = Tileset.from_config(storage, c)
+    tileset.prepare_storage()
+    pool.close()
+
+
+@storage.command()
+@click.option('--config', type=click.Path(exists=True))
+@click.option('--storage-dbname')
+@click.option('--storage-host')
+@click.option('--storage-port')
+@click.option('--storage-username')
+@click.option('--id', help='Override YAML config ID')
+def destroy(config, storage_dbname, storage_host, storage_port, storage_username, id):
+    ''' Destroy storage for tiles'''
+    if config is None and id is None:
+        raise click.UsageError('''Missing one of '--id' or '--config' options''')
+
+    # No id specified, so load the config for one. We know from above config is not none.
+    c = None
+    if id is None:
+        c = tilekiln.load_config(config)
+        id = c.id
+
+    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
+                                                   "host": storage_host,
+                                                   "port": storage_port,
+                                                   "user": storage_username})
+    storage = Storage(pool)
+    storage.remove_tileset(id)
+    pool.close()
+
+
+@storage.command()
+@click.option('--config', type=click.Path(exists=True))
+@click.option('--storage-dbname')
+@click.option('--storage-host')
+@click.option('--storage-port')
+@click.option('--storage-username')
+@click.option('-z', '--zoom', type=click.INT, multiple=True)
+@click.option('--id', help='Override YAML config ID')
+def delete(config, storage_dbname, storage_host, storage_port, storage_username, zoom, id):
+    '''Mass-delete tiles from a tileset
+
+    Deletes tiles from a tileset, by zoom, or delete all zooms.
+    '''
+    if config is None and id is None:
+        raise click.UsageError('''Missing one of '--id' or '--config' options''')
+
+    # No id specified, so load the config for one. We know from above config is not none.
+    c = None
+    if id is None:
+        c = tilekiln.load_config(config)
+        id = c.id
+
+    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
+                                                   "host": storage_host,
+                                                   "port": storage_port,
+                                                   "user": storage_username})
+    storage = Storage(pool)
+
+    if (zoom == ()):
+        storage.truncate_tables(id)
+    else:
+        storage.truncate_tables(id, zoom)
+
+    pool.close()
+
+
+@storage.command()
+@click.option('--config', type=click.Path(exists=True))
+@click.option('--storage-dbname')
+@click.option('--storage-host')
+@click.option('--storage-port')
+@click.option('--storage-username')
+@click.option('--id', help='Override YAML config ID')
+def tiledelete(config, storage_dbname, storage_host, storage_port, storage_username, id):
+    '''Delete specific tiles.
+
+    A list of z/x/y tiles is read from stdin and those tiles are deleted from
+    storage. The entire list is read before deletion starts.
+    '''
+    if config is None and id is None:
+        raise click.UsageError('''Missing one of '--id' or '--config' options''')
+
+    # No id specified, so load the config for one. We know from above config is not none.
+    c = None
+    if id is None:
+        c = tilekiln.load_config(config)
+        id = c.id
+
+    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
+                                                   "host": storage_host,
+                                                   "port": storage_port,
+                                                   "user": storage_username})
+    storage = Storage(pool)
+
+    # TODO: This requires reading all of stdin before starting. This lets it display
+    # how many tiles to delete but also means it has to read them all in before starting
+    tiles = {Tile.from_string(t) for t in sys.stdin}
+    click.echo(f"Deleting {len(tiles)} tiles")
+    storage.delete_tiles(id, tiles)
 
 
 @cli.command()
@@ -191,172 +391,6 @@ def serve(bind_host, bind_port, num_threads,
         os.environ["PGUSER"] = storage_username
 
     uvicorn.run("tilekiln.server:server", host=bind_host, port=bind_port, workers=num_threads)
-
-
-@cli.group()
-def storage():
-    '''Commands working with tile storage'''
-    pass
-
-
-@storage.command()
-@click.option('--config', required=True, type=click.Path(exists=True))
-@click.option('--storage-dbname')
-@click.option('--storage-host')
-@click.option('--storage-port')
-@click.option('--storage-username')
-@click.option('--id', help='Override YAML config ID')
-def init(config, storage_dbname, storage_host, storage_port, storage_username, id):
-    ''' Initialize storage for tiles'''
-
-    c = tilekiln.load_config(config)
-
-    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
-                                                   "host": storage_host,
-                                                   "port": storage_port,
-                                                   "user": storage_username})
-    storage = Storage(pool)
-    storage.create_schema()
-    tileset = Tileset.from_config(storage, c)
-    tileset.prepare_storage()
-    pool.close()
-
-
-@storage.command()
-@click.option('--config', type=click.Path(exists=True))
-@click.option('--storage-dbname')
-@click.option('--storage-host')
-@click.option('--storage-port')
-@click.option('--storage-username')
-@click.option('--id', help='Override YAML config ID')
-def destroy(config, storage_dbname, storage_host, storage_port, storage_username, id):
-    ''' Destroy storage for tiles'''
-    if config is None and id is None:
-        raise click.UsageError('''Missing one of '--id' or '--config' options''')
-
-    # No id specified, so load the config for one. We know from above config is not none.
-    c = None
-    if id is None:
-        c = tilekiln.load_config(config)
-        id = c.id
-
-    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
-                                                   "host": storage_host,
-                                                   "port": storage_port,
-                                                   "user": storage_username})
-    storage = Storage(pool)
-    storage.remove_tileset(id)
-    pool.close()
-
-
-@storage.command()
-@click.option('--config', type=click.Path(exists=True))
-@click.option('--storage-dbname')
-@click.option('--storage-host')
-@click.option('--storage-port')
-@click.option('--storage-username')
-@click.option('-z', '--zoom', type=click.INT, multiple=True)
-@click.option('--id', help='Override YAML config ID')
-def delete(config, storage_dbname, storage_host, storage_port, storage_username, zoom, id):
-    ''' Delete tiles from storage, optionally by-zoom'''
-    if config is None and id is None:
-        raise click.UsageError('''Missing one of '--id' or '--config' options''')
-
-    # No id specified, so load the config for one. We know from above config is not none.
-    c = None
-    if id is None:
-        c = tilekiln.load_config(config)
-        id = c.id
-
-    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
-                                                   "host": storage_host,
-                                                   "port": storage_port,
-                                                   "user": storage_username})
-    storage = Storage(pool)
-
-    if (zoom == ()):
-        storage.truncate_tables(id)
-    else:
-        storage.truncate_tables(id, zoom)
-
-    pool.close()
-
-
-@storage.command()
-@click.option('--config', type=click.Path(exists=True))
-@click.option('--storage-dbname')
-@click.option('--storage-host')
-@click.option('--storage-port')
-@click.option('--storage-username')
-@click.option('--id', help='Override YAML config ID')
-def tiledelete(config, storage_dbname, storage_host, storage_port, storage_username, id):
-    '''Delete specific tiles
-       Pass a list of z/x/y to stdin to generate those tiles'''
-    if config is None and id is None:
-        raise click.UsageError('''Missing one of '--id' or '--config' options''')
-
-    # No id specified, so load the config for one. We know from above config is not none.
-    c = None
-    if id is None:
-        c = tilekiln.load_config(config)
-        id = c.id
-
-    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
-                                                   "host": storage_host,
-                                                   "port": storage_port,
-                                                   "user": storage_username})
-    storage = Storage(pool)
-
-    # TODO: This requires reading all of stdin before starting. This lets it display
-    # how many tiles to delete but also means it has to read them all in before starting
-    tiles = {Tile.from_string(t) for t in sys.stdin}
-    click.echo(f"Deleting {len(tiles)} tiles")
-    storage.delete_tiles(id, tiles)
-
-
-@cli.group()
-def generate():
-    '''Commands for tile generation'''
-    pass
-
-
-@generate.command()
-@click.option('--config', required=True, type=click.Path(exists=True))
-@click.option('-n', '--num-threads', default=len(os.sched_getaffinity(0)),
-              show_default=True, help='Number of worker processes.')
-@click.option('--source-dbname')
-@click.option('--source-host')
-@click.option('--source-port')
-@click.option('--source-username')
-@click.option('--storage-dbname')
-@click.option('--storage-host')
-@click.option('--storage-port')
-@click.option('--storage-username')
-def tiles(config, num_threads, source_dbname, source_host, source_port, source_username,
-          storage_dbname, storage_host, storage_port, storage_username):
-    '''Generate specific tiles.
-       Pass a list of z/x/y to stdin to generate those tiles'''
-
-    c = tilekiln.load_config(config)
-
-    tiles = {Tile.from_string(t) for t in sys.stdin}
-    threads = min(num_threads, len(tiles))  # No point in more threads than tiles
-
-    click.echo(f"Rendering {len(tiles)} tiles over {threads} threads")
-
-    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
-                                                   "host": storage_host,
-                                                   "port": storage_port,
-                                                   "user": storage_username})
-    storage = Storage(pool)
-
-    tileset = Tileset.from_config(storage, c)
-    gen_conn = psycopg.connect(dbname=source_dbname, host=source_host,
-                               port=source_port, username=source_username)
-    kiln = Kiln(c, gen_conn)
-    for tile in tiles:
-        mvt = kiln.render(tile)
-        tileset.save_tile(tile, mvt)
 
 
 @cli.command()

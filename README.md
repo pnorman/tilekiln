@@ -6,9 +6,7 @@ Tilekiln is a set of command-line utilities to generate and serve Mapbox Vector 
 
 Generation relies on the standard method of a PostgreSQL + PostGIS server as a data source, and ST_AsMVT to serialize the MVTs.
 
-The target use-case is vector tiles for OpenStreetMap Carto on openstreetmap.org, a worldwide complex basemap under high load.
-
-Minutely updates are supported with an appropriately updating database.
+The target use-case is vector tiles for a worldwide complex basemap under high load which requires minutely updates. If only daily updates are required options like [tilemaker](https://tilemaker.org/) or [planetiler](https://github.com/onthegomap/planetiler) may be simpler to host.
 
 ## Requirements
 
@@ -18,25 +16,80 @@ Tilekiln requires a PostGIS database with data loaded to generate vector tiles.
 
 - PostgreSQL 10+
 - PostGIS 3.1+
-- Python 3.10+
+- Python 3.10
+
+## Concepts
+
+Tilekiln issues queries against a *source* database to generate Mapbox Vector Tile (MVT) layers, assembles the layers into a tile, then either serves the tile to the user or stores it in a *storage* database. It can also serve previously generated tiles from the *storage* database which completely removes the *source* database out of the critical path for serving tiles.
+
+Utility commands allow checking of configurations, storage management, and debugging as well as commands for monitoring metrics needed in production.
 
 ## Usage
-Tilekiln commands can be broken into two sets, commands which involve serving tiles, and CLI commands. Command-line options can be found with `--help`.
+Tilekiln commands can be broken into two sets, commands which involve serving tiles, and CLI commands. Command-line options can be found with `tilekiln --help`, which includes a listing and description of all options.
 
 ### CLI commands
-These commands will do something, then exit.
+CLI commands will perform a task then exit, returning to ther shell.
 
 #### `config`
 Commands to work with and check config files
 
-#### `generate`
-Commands for tile generation
+##### `config test`
+Tests a config for validity.
+
+The process will exit with exit code 0 if tilekiln can load the config.
+
+This is intended for build and CI scripts used by configs.
 
 #### `sql`
-Prints the SQL for a tile
+Print the SQL for a tile or layer.
+
+Prints the SQL that would be issued to generate a particular tile layer,
+or if no layer is given, the entire tile. This allows manual debugging of
+a tile query.
+
+#### `generate`
+Commands for tile generation.
+
+All tile generation commands run queries against the source database which
+has the geospatial data.
+
+##### `generate tiles`
+Generate specific tiles.
+
+A list of z/x/y tiles is read from stdin and those tiles are generated and
+saved to storage. The entire list is read before deletion starts.
+
+##### `generate zoom`
+*Not yet implemented.*
+Generate all tiles by zoom.
 
 #### `storage`
-Commands working with tile storage
+Commands working with tile storage.
+
+These commands allow creation and manipulation of the tile storage database.
+
+##### `storage init`
+Initialize storage for a tileset.
+
+Creates the storage for a tile layer and stores its metadata in the database.
+If the metadata tables have not yet been created they will also be setup.
+
+##### `storage destroy`
+Destroy storage for a tileset.
+
+Removes the storage for a tile layer and deletes its associated metadata.
+The metadata tables themselves are not removed.
+
+##### `storage delete`
+Mass-delete tiles from a tileset
+
+Deletes tiles from a tileset, by zoom, or delete all zooms.
+
+##### `storage tiledelete`
+Delete specific tiles.
+
+A list of z/x/y tiles is read from stdin and those tiles are deleted from
+storage. The entire list is read before deletion starts.
 
 ### Serving commands
 These commands start a HTTP server to serve content.
@@ -73,8 +126,8 @@ We have to produce a tilekiln config from the osm2pgsql-themepark config. This r
 
 ```sh
 sed -i -E -e "s/--.*(themepark:plugin\('tilekiln'\):write_config\('tk'\))/\1/" ./osm2pgsql-themepark/config/shortbread_gen.lua
-LUA_PATH="./osm2pgsql-themepark/lua/?.lua;;" osm2pgsql -d flex -O flex -S ./osm2pgsql-themepark/config/shortbread_gen.lua osm-data.pbf --cache 7000
-LUA_PATH="./osm2pgsql-themepark/lua/?.lua;;" osm2pgsql-gen -d flex -S ./osm2pgsql-themepark/config/shortbread_gen.lua -j 8
+LUA_PATH="./osm2pgsql-themepark/lua/?.lua;;" osm2pgsql -d flex -O flex -S ./osm2pgsql-themepark/config/shortbread_gen.lua osm-data.pbf
+LUA_PATH="./osm2pgsql-themepark/lua/?.lua;;" osm2pgsql-gen -d flex -S ./osm2pgsql-themepark/config/shortbread_gen.lua
 mkdir -p downloads
 osm2pgsql-themepark/themes/external/download-and-import.sh ./downloads flex oceans ocean
 ```
@@ -82,10 +135,17 @@ osm2pgsql-themepark/themes/external/download-and-import.sh ./downloads flex ocea
 ### Serve some tiles
 
 ```sh
-tilekiln/bin/tilekiln dev
+tilekiln/bin/tilekiln dev --config shortbread_config/config.yaml --source-dbname flex
 ```
 
 Use the tilejson URL `http://127.0.0.1:8000/tilejson.json` to load tiles into your preferred tile viewer such as QGIS.
+
+### Set up storage
+
+```sh
+createdb tiles
+tilekiln/bin/tilekiln storage init --storage-dbname tiles --config shortbread_config/config.yaml
+```
 
 ## History
 The tilekiln configuration syntax is based on studies and experience with other vector tile and map generation configurations. In particular, it is heavily inspired by Tilezen's use of Jinja2 templates and TileJSON for necessary metadata.
