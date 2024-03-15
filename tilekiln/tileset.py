@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
+import datetime
 
 from tilekiln.config import Config
 from tilekiln.tile import Tile
@@ -50,7 +51,7 @@ class Tileset:
         self.storage.set_metadata(self.id, self.minzoom, self.maxzoom,
                                   self.tilejson)
 
-    def get_tile(self, tile: Tile) -> bytes | None:
+    def get_tile(self, tile: Tile) -> tuple[bytes | None, datetime.datetime | None]:
         return self.storage.get_tile(self.id, tile)
 
     def save_tile(self, tile: Tile, data: bytes) -> None:

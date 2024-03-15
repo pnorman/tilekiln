@@ -12,6 +12,8 @@ from tilekiln.tile import Tile
 from tilekiln.tileset import Tileset
 from tilekiln.storage import Storage
 
+HTTP_TIME = "%a, %d %b %Y %H:%M:%S GMT"
+
 # Constants for MVTs
 MVT_MIME_TYPE = "application/vnd.mapbox-vector-tile"
 
@@ -129,9 +131,20 @@ def serve_tile(prefix: str, zoom: int, x: int, y: int):
     if prefix not in tilesets:
         raise HTTPException(status_code=404, detail=f"Tileset {prefix} not found on server.")
 
-    return Response(tilesets[prefix].get_tile(Tile(zoom, x, y)),
-                    media_type=MVT_MIME_TYPE,
-                    headers=STANDARD_HEADERS)
+    tile, generated = tilesets[prefix].get_tile(Tile(zoom, x, y))
+
+    if tile is None:
+        raise HTTPException(status_code=404,
+                            detail=f"Tile {prefix}/{zoom}/{x}/{y} not found in storage.")
+
+    # We use the generated timestamp on the assumption that a specific
+    # x/y/z will not be generated twice in the same ms.
+    headers: dict[str, str] = {}
+    if generated is not None:
+        headers = {"Last-Modified": generated.strftime(HTTP_TIME),
+                   "E-tag": generated.strftime("%s.%f")}
+    return Response(tile, media_type=MVT_MIME_TYPE,
+                    headers=STANDARD_HEADERS | headers)
 
 
 @live.head("/{prefix}/{zoom}/{x}/{y}.mvt")
@@ -142,20 +155,23 @@ def live_serve_tile(prefix: str, zoom: int, x: int, y:  int):
         raise HTTPException(status_code=404, detail=f"Tileset {prefix} not found on server.")
 
     # Attempt to serve a stored tile
-    existing = tilesets[prefix].get_tile(Tile(zoom, x, y))
+    existing, generated = tilesets[prefix].get_tile(Tile(zoom, x, y))
 
     # Handle storage hits
     if existing is not None:
-        return Response(existing,
-                        media_type=MVT_MIME_TYPE,
-                        headers=STANDARD_HEADERS)
+        headers: dict[str, str] = {}
+        if generated is not None:
+            headers = {"Last-Modified": generated.strftime(HTTP_TIME),
+                       "E-tag": generated.strftime("%s.%f")}
+        return Response(existing, media_type=MVT_MIME_TYPE,
+                        headers=STANDARD_HEADERS | headers)
 
     # Storage miss, so generate a new tile
     global kiln
     tile = Tile(zoom, x, y)
-    generated = kiln.render(tile)
+    response = kiln.render(tile)
     # TODO: Make async so tile is saved and response returned in parallel
-    tilesets[prefix].save_tile(tile, generated)
-    return Response(generated,
+    tilesets[prefix].save_tile(tile, response)
+    return Response(response,
                     media_type=MVT_MIME_TYPE,
                     headers=STANDARD_HEADERS)

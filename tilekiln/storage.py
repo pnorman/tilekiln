@@ -1,3 +1,4 @@
+import datetime
 import gzip
 import json
 import sys
@@ -197,17 +198,19 @@ class Storage:
                     self.__truncate_table(cur, id, zoom)
                 conn.commit()
 
-    def get_tile(self, id: str, tile: Tile) -> bytes | None:
+    def get_tile(self, id: str, tile: Tile) -> tuple[bytes | None, datetime.datetime | None]:
         with self.__pool.connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(f'''SELECT tile FROM "{self.__schema}"."{id}"
+            conn.execute("SET TIMEZONE TO 'GMT'")
+            with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+                cur.execute(f'''SELECT generated, tile FROM "{self.__schema}"."{id}"
                                 WHERE zoom = %s AND x = %s AND y = %s''',
                             (tile.zoom, tile.x, tile.y), binary=True)
                 result = cur.fetchone()
                 if result is None:
-                    return None
-                return gzip.decompress(result[0])
+                    return None, None
+                return gzip.decompress(result["tile"]), result["generated"]
 
+    # TODO: Needs to return timestamp written to the DB
     def save_tile(self, id: str, tile: Tile, tiledata: bytes, render_time=0):
         with self.__pool.connection() as conn:
             with conn.cursor() as cur:
@@ -372,6 +375,8 @@ class Storage:
                         WHERE zoom = %s AND x = %s AND y = %s''',
                     (tile.zoom, tile.x, tile.y))
 
+# TODO: The statement should compare to the existing value and if they are the same not
+# update in order to keep the last-modified header the same and improve caching.
     def __write_to_storage(self, id, tile: Tile, tiledata, cur):
         tablename = f"{id}_z{tile.zoom}"
         cur.execute(f'''INSERT INTO "{self.__schema}"."{tablename}" (zoom, x, y, tile)
