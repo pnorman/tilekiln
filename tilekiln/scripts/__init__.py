@@ -38,7 +38,7 @@ def config() -> None:
 
 
 @config.command()
-@click.option('--config', required=True, type=click.Path(exists=True))
+@click.option('--config', required=True, type=click.Path(exists=True, dir_okay=False))
 def test(config: str) -> None:
     '''Tests a config for validity.
 
@@ -50,7 +50,7 @@ def test(config: str) -> None:
 
 
 @cli.command()
-@click.option('--config', required=True, type=click.Path(exists=True))
+@click.option('--config', required=True, type=click.Path(exists=True, dir_okay=False))
 @click.option('--layer', type=click.STRING)
 @click.option('--zoom', '-z', type=click.INT, required=True)
 @click.option('-x', type=click.INT, required=True)
@@ -95,7 +95,7 @@ def generate() -> None:
 
 
 @generate.command()
-@click.option('--config', required=True, type=click.Path(exists=True))
+@click.option('--config', required=True, type=click.Path(exists=True, dir_okay=False))
 @click.option('-n', '--num-threads', default=len(os.sched_getaffinity(0)),
               show_default=True, help='Number of worker processes.')
 @click.option('--source-dbname')
@@ -147,7 +147,7 @@ def storage() -> None:
 
 
 @storage.command()
-@click.option('--config', required=True, type=click.Path(exists=True))
+@click.option('--config', required=True, type=click.Path(exists=True, dir_okay=False))
 @click.option('--storage-dbname')
 @click.option('--storage-host')
 @click.option('--storage-port', type=click.INT)
@@ -176,7 +176,7 @@ def init(config: str,
 
 
 @storage.command()
-@click.option('--config', type=click.Path(exists=True))
+@click.option('--config', type=click.Path(exists=True, dir_okay=False))
 @click.option('--storage-dbname')
 @click.option('--storage-host')
 @click.option('--storage-port', type=click.INT)
@@ -205,7 +205,7 @@ def destroy(config: str,
 
 
 @storage.command()
-@click.option('--config', type=click.Path(exists=True))
+@click.option('--config', type=click.Path(exists=True, dir_okay=False))
 @click.option('--storage-dbname')
 @click.option('--storage-host')
 @click.option('--storage-port')
@@ -243,7 +243,7 @@ def delete(config: str,
 
 
 @storage.command()
-@click.option('--config', type=click.Path(exists=True))
+@click.option('--config', type=click.Path(exists=True, dir_okay=False))
 @click.option('--storage-dbname')
 @click.option('--storage-host')
 @click.option('--storage-port', type=click.INT)
@@ -280,7 +280,7 @@ def tiledelete(config: str,
 
 
 @cli.command()
-@click.option('--config', required=True, type=click.Path(exists=True))
+@click.option('--config', required=True, type=click.Path(exists=True, dir_okay=False))
 @click.option('--bind-host', default='127.0.0.1', show_default=True,
               help='Bind socket to this host.')
 @click.option('--bind-port', default=8000, show_default=True,
@@ -319,7 +319,7 @@ def dev(config: str, bind_host: str, bind_port: int, num_threads: int,
 
 
 @cli.command()
-@click.option('--config', required=True, type=click.Path(exists=True))
+@click.option('--config', required=True, type=click.Path(exists=True, dir_okay=False))
 @click.option('--bind-host', default='127.0.0.1', show_default=True,
               help='Bind socket to this host. ')
 @click.option('--bind-port', default=8000, show_default=True,
