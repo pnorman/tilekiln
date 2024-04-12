@@ -6,7 +6,7 @@ import tilekiln.config
 
 
 # TODO: Put somewhere else
-def load_config(path):
+def load_config(path) -> tilekiln.config.Config:
     '''Loads a config from the filesystem, given a path'''
 
     full_path = os.path.join(os.getcwd(), path)

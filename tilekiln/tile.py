@@ -14,15 +14,15 @@ class Tile:
         self.x = x
         self.y = y
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Tile({self.zoom},{self.x},{self.y})"
 
     @classmethod
-    def from_string(cls, tile):
+    def from_string(cls, tile: str):
         fragments = tile.split("/")
         return cls(int(fragments[0]), int(fragments[1]), int(fragments[2]))
 
-    def bbox(self, buffer):
+    def bbox(self, buffer) -> str:
         '''Returns the bounding box for a tile
         '''
         return f'''ST_TileEnvelope({self.zoom}, {self.x}, {self.y}, margin=>{buffer})'''

@@ -182,7 +182,7 @@ class Storage:
     '''
     Methods that involve saving, fetching, and deleting tiles
     '''
-    def delete_tiles(self, id: str, tiles: Iterator[Tile]):
+    def delete_tiles(self, id: str, tiles: set[Tile]):
         with self.__pool.connection() as conn:
             with conn.cursor() as cur:
                 for tile in tiles:

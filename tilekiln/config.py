@@ -80,7 +80,7 @@ class LayerConfig:
         self.minzoom = min({d.minzoom for d in self.__definitions})
         self.maxzoom = max({d.maxzoom for d in self.__definitions})
 
-    def render_sql(self, tile):
+    def render_sql(self, tile) -> str | None:
         '''Returns the SQL for a layer, given a tile, or None if it is outside the zoom range
            of the definitions
         '''

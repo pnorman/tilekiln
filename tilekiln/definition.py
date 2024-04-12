@@ -21,7 +21,7 @@ class Definition:
         # TODO: Let is use directories so one file can include others.
         self.__template = j2Environment.from_string(filesystem.readtext(definition_yaml["file"]))
 
-    def render_sql(self, tile):
+    def render_sql(self, tile) -> str:
         '''Generate the SQL for a layer
         '''
 

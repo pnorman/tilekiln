@@ -27,19 +27,19 @@ class OrderCommands(click.Group):
 
 # TODO: Refactor this into one file per group
 @click.group(cls=OrderCommands)
-def cli():
+def cli() -> None:
     pass
 
 
 @cli.group()
-def config():
+def config() -> None:
     '''Commands to work with and check config files'''
     pass
 
 
 @config.command()
 @click.option('--config', required=True, type=click.Path(exists=True))
-def test(config):
+def test(config: str) -> None:
     '''Tests a config for validity.
 
     The process will exit with exit code 0 if tilekiln can load the config.
@@ -55,7 +55,7 @@ def test(config):
 @click.option('--zoom', '-z', type=click.INT, required=True)
 @click.option('-x', type=click.INT, required=True)
 @click.option('-y', type=click.INT, required=True)
-def sql(config, layer, zoom, x, y):
+def sql(config: str, layer: str, zoom: int, x: int, y: int) -> None:
     '''Print the SQL for a tile or layer.
 
     Prints the SQL that would be issued to generate a particular tile layer,
@@ -85,7 +85,7 @@ def sql(config, layer, zoom, x, y):
 
 
 @cli.group()
-def generate():
+def generate() -> None:
     '''Commands for tile generation.
 
     All tile generation commands run queries against the source database which has the
@@ -106,8 +106,9 @@ def generate():
 @click.option('--storage-host')
 @click.option('--storage-port')
 @click.option('--storage-username')
-def tiles(config, num_threads, source_dbname, source_host, source_port, source_username,
-          storage_dbname, storage_host, storage_port, storage_username):
+def tiles(config: int, num_threads: int,
+          source_dbname: str, source_host: str, source_port: int, source_username: str,
+          storage_dbname: str, storage_host: str, storage_port: int, storage_username: str) -> None:
     '''Generate specific tiles.
 
     A list of z/x/y tiles is read from stdin and those tiles are generated and saved
@@ -137,7 +138,7 @@ def tiles(config, num_threads, source_dbname, source_host, source_port, source_u
 
 
 @cli.group()
-def storage():
+def storage() -> None:
     '''Commands working with tile storage.
 
     These commands allow creation and manipulation of the tile storage database.
@@ -149,10 +150,12 @@ def storage():
 @click.option('--config', required=True, type=click.Path(exists=True))
 @click.option('--storage-dbname')
 @click.option('--storage-host')
-@click.option('--storage-port')
+@click.option('--storage-port', type=click.INT)
 @click.option('--storage-username')
 @click.option('--id', help='Override YAML config ID')
-def init(config, storage_dbname, storage_host, storage_port, storage_username, id):
+def init(config: str,
+         storage_dbname: str, storage_host: str, storage_port: int, storage_username: str,
+         id: str) -> None:
     '''Initialize storage for tiles.
 
     Creates the storage for a tile layer and stores its metadata in the database.
@@ -176,10 +179,12 @@ def init(config, storage_dbname, storage_host, storage_port, storage_username, i
 @click.option('--config', type=click.Path(exists=True))
 @click.option('--storage-dbname')
 @click.option('--storage-host')
-@click.option('--storage-port')
+@click.option('--storage-port', type=click.INT)
 @click.option('--storage-username')
 @click.option('--id', help='Override YAML config ID')
-def destroy(config, storage_dbname, storage_host, storage_port, storage_username, id):
+def destroy(config: str,
+            storage_dbname: str, storage_host: str, storage_port: int, storage_username: str,
+            id: str) -> None:
     ''' Destroy storage for tiles'''
     if config is None and id is None:
         raise click.UsageError('''Missing one of '--id' or '--config' options''')
@@ -207,7 +212,9 @@ def destroy(config, storage_dbname, storage_host, storage_port, storage_username
 @click.option('--storage-username')
 @click.option('-z', '--zoom', type=click.INT, multiple=True)
 @click.option('--id', help='Override YAML config ID')
-def delete(config, storage_dbname, storage_host, storage_port, storage_username, zoom, id):
+def delete(config: str,
+           storage_dbname: str, storage_host: str, storage_port: int, storage_username: str,
+           zoom: tuple[int], id: str) -> None:
     '''Mass-delete tiles from a tileset
 
     Deletes tiles from a tileset, by zoom, or delete all zooms.
@@ -227,7 +234,7 @@ def delete(config, storage_dbname, storage_host, storage_port, storage_username,
                                                    "user": storage_username})
     storage = Storage(pool)
 
-    if (zoom == ()):
+    if (len(zoom) == 0):
         storage.truncate_tables(id)
     else:
         storage.truncate_tables(id, zoom)
@@ -239,10 +246,12 @@ def delete(config, storage_dbname, storage_host, storage_port, storage_username,
 @click.option('--config', type=click.Path(exists=True))
 @click.option('--storage-dbname')
 @click.option('--storage-host')
-@click.option('--storage-port')
+@click.option('--storage-port', type=click.INT)
 @click.option('--storage-username')
 @click.option('--id', help='Override YAML config ID')
-def tiledelete(config, storage_dbname, storage_host, storage_port, storage_username, id):
+def tiledelete(config: str,
+               storage_dbname: str, storage_host: str, storage_port: int, storage_username: str,
+               id: str) -> None:
     '''Delete specific tiles.
 
     A list of z/x/y tiles is read from stdin and those tiles are deleted from
@@ -279,14 +288,15 @@ def tiledelete(config, storage_dbname, storage_host, storage_port, storage_usern
 @click.option('-n', '--num-threads', default=len(os.sched_getaffinity(0)),
               show_default=True, help='Number of worker processes.')
 @click.option('--source-dbname')
-@click.option('--source-host')
+@click.option('--source-host', type=click.INT)
 @click.option('--source-port')
 @click.option('--source-username')
 @click.option('--base-url', help='Defaults to http://127.0.0.1:8000' +
               ' or the bind host and port')
 @click.option('--id', help='Override YAML config ID')
-def dev(config, bind_host, bind_port, num_threads,
-        source_dbname, source_host, source_port, source_username, base_url, id):
+def dev(config: str, bind_host: str, bind_port: int, num_threads: int,
+        source_dbname: str, source_host: str, source_port: int, source_username: str,
+        base_url: str, id: str) -> None:
     '''Starts a server for development
     '''
     os.environ[tilekiln.dev.TILEKILN_CONFIG] = config
@@ -301,7 +311,7 @@ def dev(config, bind_host, bind_port, num_threads,
     if source_host is not None:
         os.environ["PGHOST"] = source_host
     if source_port is not None:
-        os.environ["PGPORT"] = source_port
+        os.environ["PGPORT"] = str(source_port)
     if source_username is not None:
         os.environ["PGUSER"] = source_username
 
@@ -326,9 +336,10 @@ def dev(config, bind_host, bind_port, num_threads,
 @click.option('--storage-username')
 @click.option('--base-url', help='Defaults to http://127.0.0.1:8000' +
               ' or the bind host and port')
-def live(config, bind_host, bind_port, num_threads,
-         source_dbname, source_host, source_port, source_username,
-         storage_dbname, storage_host, storage_port, storage_username, base_url):
+def live(config: str, bind_host: str, bind_port: int, num_threads: int,
+         source_dbname: str, source_host: str, source_port: int, source_username: str,
+         storage_dbname: str, storage_host: str, storage_port: int, storage_username: str,
+         base_url: str) -> None:
     '''Starts a server for pre-generated tiles from DB'''
     os.environ[tilekiln.server.TILEKILN_CONFIG] = config
     os.environ[tilekiln.server.TILEKILN_THREADS] = str(num_threads)
@@ -342,7 +353,7 @@ def live(config, bind_host, bind_port, num_threads,
     if source_host is not None:
         os.environ["GENERATE_PGHOST"] = source_host
     if source_port is not None:
-        os.environ["GENERATE_PGPORT"] = source_port
+        os.environ["GENERATE_PGPORT"] = str(source_port)
     if source_username is not None:
         os.environ["GENERATE_PGUSER"] = source_username
 
@@ -351,7 +362,7 @@ def live(config, bind_host, bind_port, num_threads,
     if storage_host is not None:
         os.environ["STORAGE_PGHOST"] = storage_host
     if storage_port is not None:
-        os.environ["STORAGE_PGPORT"] = storage_port
+        os.environ["STORAGE_PGPORT"] = str(storage_port)
     if storage_username is not None:
         os.environ["STORAGE_PGUSER"] = storage_username
 
@@ -364,15 +375,16 @@ def live(config, bind_host, bind_port, num_threads,
 @click.option('--bind-port', default=8000, show_default=True,
               type=click.INT, help='Bind socket to this port.')
 @click.option('-n', '--num-threads', default=len(os.sched_getaffinity(0)),
-              show_default=True, help='Number of worker processes.')
+              type=click.INT, show_default=True, help='Number of worker processes.')
 @click.option('--storage-dbname')
 @click.option('--storage-host')
 @click.option('--storage-port')
 @click.option('--storage-username')
 @click.option('--base-url', help='Defaults to http://127.0.0.1:8000' +
               ' or the bind host and port')
-def serve(bind_host, bind_port, num_threads,
-          storage_dbname, storage_host, storage_port, storage_username, base_url):
+def serve(bind_host: str, bind_port: int, num_threads: int,
+          storage_dbname: str, storage_host: str, storage_port: int, storage_username: str,
+          base_url: str) -> None:
     '''Starts a server for pre-generated tiles from DB'''
 
     os.environ[tilekiln.server.TILEKILN_THREADS] = str(num_threads)
@@ -386,7 +398,7 @@ def serve(bind_host, bind_port, num_threads,
     if storage_host is not None:
         os.environ["PGHOST"] = storage_host
     if storage_port is not None:
-        os.environ["PGPORT"] = storage_port
+        os.environ["PGPORT"] = str(storage_port)
     if storage_username is not None:
         os.environ["PGUSER"] = storage_username
 
@@ -400,10 +412,10 @@ def serve(bind_host, bind_port, num_threads,
               type=click.INT, help='Bind socket to this port.')
 @click.option('--storage-dbname')
 @click.option('--storage-host')
-@click.option('--storage-port')
+@click.option('--storage-port', type=click.INT)
 @click.option('--storage-username')
-def prometheus(bind_host, bind_port,
-               storage_dbname, storage_host, storage_port, storage_username):
+def prometheus(bind_host: str, bind_port: int, storage_dbname: str, storage_host: str,
+               storage_port: int, storage_username: str) -> None:
     ''' Run a prometheus exporter which can be accessed for gathering metrics
         on stored tiles. '''
     pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
