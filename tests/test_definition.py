@@ -70,3 +70,16 @@ FROM mvtgeom;'''
 SELECT ST_AsMVT(mvtgeom.*, 'units', 1024)
 FROM mvtgeom;'''
             self.assertEqual(d.render_sql(Tile(2, 0, 1)), expected)
+
+            fs.writetext("whitespace.sql.jinja2", "foo\n{# comment #}\nbar")
+            d = Definition("whitespace", {"minzoom": 1, "maxzoom": 3, "extent": 1024, "buffer": 256,
+                                          "file": "whitespace.sql.jinja2"}, fs)
+            # Crudely slice up the string to turn it into numbers
+            expected = '''WITH mvtgeom AS
+(
+foo
+bar
+)
+SELECT ST_AsMVT(mvtgeom.*, 'whitespace', 1024)
+FROM mvtgeom;'''
+            self.assertEqual(d.render_sql(Tile(2, 0, 1)), expected)

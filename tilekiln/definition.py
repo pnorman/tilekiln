@@ -7,7 +7,7 @@ DEFAULT_BUFFER = 0
 # Invariants of web mercator
 HALF_WORLD = 20037508.34
 
-j2Environment = j2.Environment(loader=j2.BaseLoader())
+j2Environment = j2.Environment(loader=j2.BaseLoader(), lstrip_blocks=True, trim_blocks=True)
 
 
 class Definition:
