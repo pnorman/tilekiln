@@ -42,7 +42,7 @@ class Definition:
 
         # TODO: Use proper escaping for self.id in SQL
         return ('''WITH mvtgeom AS\n(\n''' + inner + '''\n)\n''' +
-                f'''SELECT ST_AsMVT(mvtgeom.*, '{self.id}', {self.extent}, 'way', NULL)\n''' +
+                f'''SELECT ST_AsMVT(mvtgeom.*, '{self.id}', {self.extent})\n''' +
                 '''FROM mvtgeom;''')
 
 

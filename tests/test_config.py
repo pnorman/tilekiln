@@ -161,11 +161,11 @@ class TestLayerConfig(TestCase):
 (
 one
 )
-SELECT ST_AsMVT(mvtgeom.*, 'foo', 4096, 'way', NULL)
+SELECT ST_AsMVT(mvtgeom.*, 'foo', 4096)
 FROM mvtgeom;''')
             self.assertEqual(layer.render_sql(Tile(6, 0, 0)), '''WITH mvtgeom AS
 (
 two
 )
-SELECT ST_AsMVT(mvtgeom.*, 'foo', 4096, 'way', NULL)
+SELECT ST_AsMVT(mvtgeom.*, 'foo', 4096)
 FROM mvtgeom;''')
