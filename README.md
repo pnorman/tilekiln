@@ -40,7 +40,7 @@ The process will exit with exit code 0 if tilekiln can load the config.
 
 This is intended for build and CI scripts used by configs.
 
-#### `sql`
+##### `config sql`
 Print the SQL for a tile or layer.
 
 Prints the SQL that would be issued to generate a particular tile layer,

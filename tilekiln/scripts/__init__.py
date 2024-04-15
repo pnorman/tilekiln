@@ -49,7 +49,7 @@ def test(config: str) -> None:
     tilekiln.load_config(config)
 
 
-@cli.command()
+@config.command()
 @click.option('--config', required=True, type=click.Path(exists=True, dir_okay=False))
 @click.option('--layer', type=click.STRING)
 @click.option('--zoom', '-z', type=click.INT, required=True)
