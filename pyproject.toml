@@ -51,7 +51,7 @@ test = [
 ]
 
 [project.scripts]
-tilekiln = "tilekiln.scripts:cli"
+tilekiln = "tilekiln.main:cli"
 
 [project.urls]
 "Bug Reports" = "https://github.com/pnorman/tilekiln/issues"
