@@ -93,16 +93,20 @@ storage. The entire list is read before deletion starts.
 
 ### Serving commands
 These commands start a HTTP server to serve content.
+#### `serve`
+Commands for tile serving.
 
-#### `dev`
+All tile serving commands serve tiles and a tilejson over HTTP.
+
+##### `dev`
 Starts a server to live-render tiles with no caching, intended for development. It presents a tilejson at `/<id>/tilejson.json`, and for convience `/tilejson.json` redirects to it.
 
-#### `live`
+##### `live`
 Like `serve`, but fall back to live generation if a tile is missing from storage.
 
 It presents a tilejson at `/<id>/tilejson.json`.
 
-#### `serve`
+##### `static`
 Serves tiles from tile storage. This is highly scalable and the preferred mode for production.
 
 It presents a tilejson at `/<id>/tilejson.json`. In the future it will allow serving multiple tilesets.
