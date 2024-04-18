@@ -40,7 +40,6 @@ dependencies = [
     "Jinja2",
     "prometheus_client",
     "psycopg",
-    "psycopg[pool]",
     "pyyaml",
     "uvicorn",
 ]

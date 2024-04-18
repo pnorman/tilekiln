@@ -1,7 +1,7 @@
 import sys
 
 import click
-import psycopg_pool
+import psycopg
 
 import tilekiln
 
@@ -37,15 +37,12 @@ def init(config: str,
 
     c = tilekiln.load_config(config)
 
-    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
-                                                   "host": storage_host,
-                                                   "port": storage_port,
-                                                   "user": storage_username})
-    storage = Storage(pool)
-    storage.create_schema()
-    tileset = Tileset.from_config(storage, c)
-    tileset.prepare_storage()
-    pool.close()
+    with psycopg.connect(dbname=storage_dbname, host=storage_host,
+                         port=storage_port, user=storage_username) as conn:
+        storage = Storage(conn)
+        storage.create_schema()
+        tileset = Tileset.from_config(storage, c)
+        tileset.prepare_storage()
 
 
 @storage.command()
@@ -68,13 +65,10 @@ def destroy(config: str,
         c = tilekiln.load_config(config)
         id = c.id
 
-    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
-                                                   "host": storage_host,
-                                                   "port": storage_port,
-                                                   "user": storage_username})
-    storage = Storage(pool)
-    storage.remove_tileset(id)
-    pool.close()
+    with psycopg.connect(dbname=storage_dbname, host=storage_host,
+                         port=storage_port, user=storage_username) as conn:
+        storage = Storage(conn)
+        storage.remove_tileset(id)
 
 
 @storage.command()
@@ -101,18 +95,14 @@ def delete(config: str,
         c = tilekiln.load_config(config)
         id = c.id
 
-    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
-                                                   "host": storage_host,
-                                                   "port": storage_port,
-                                                   "user": storage_username})
-    storage = Storage(pool)
+    with psycopg.connect(dbname=storage_dbname, host=storage_host,
+                         port=storage_port, user=storage_username) as conn:
+        storage = Storage(conn)
 
-    if (len(zoom) == 0):
-        storage.truncate_tables(id)
-    else:
-        storage.truncate_tables(id, zoom)
-
-    pool.close()
+        if (len(zoom) == 0):
+            storage.truncate_tables(id)
+        else:
+            storage.truncate_tables(id, zoom)
 
 
 @storage.command()
@@ -139,14 +129,12 @@ def tiledelete(config: str,
         c = tilekiln.load_config(config)
         id = c.id
 
-    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
-                                                   "host": storage_host,
-                                                   "port": storage_port,
-                                                   "user": storage_username})
-    storage = Storage(pool)
+    with psycopg.connect(dbname=storage_dbname, host=storage_host,
+                         port=storage_port, user=storage_username) as conn:
+        storage = Storage(conn)
 
-    # TODO: This requires reading all of stdin before starting. This lets it display
-    # how many tiles to delete but also means it has to read them all in before starting
-    tiles = {Tile.from_string(t) for t in sys.stdin}
-    click.echo(f"Deleting {len(tiles)} tiles")
-    storage.delete_tiles(id, tiles)
+        # TODO: This requires reading all of stdin before starting. This lets it display
+        # how many tiles to delete but also means it has to read them all in before starting
+        tiles = {Tile.from_string(t) for t in sys.stdin}
+        click.echo(f"Deleting {len(tiles)} tiles")
+        storage.delete_tiles(id, tiles)

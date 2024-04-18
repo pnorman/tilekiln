@@ -2,7 +2,6 @@ import json
 import os
 
 import psycopg
-import psycopg_pool
 from fastapi import FastAPI, Response, HTTPException
 
 import tilekiln
@@ -35,6 +34,8 @@ tilesets: dict[str, Tileset] = {}
 server = FastAPI()
 live = FastAPI()
 
+# TODO: Set up middleware for CORS
+
 
 # TODO: Move elsewhere
 def change_tilejson_url(tilejson: str, baseurl: str) -> str:
@@ -49,10 +50,11 @@ def load_server_config():
     global storage
     global tilesets
     # Because the DB connection variables are passed as standard PG* vars,
-    # a plain ConnectionPool() will connect to the right DB
-    pool = psycopg_pool.ConnectionPool(min_size=1, max_size=1)
+    # a plain connect() will connect to the right DB
+    conn = psycopg.connect()
+    # TODO: Make readonly?
 
-    storage = Storage(pool)
+    storage = Storage(conn)
     for tileset in storage.get_tilesets():
         tilesets[tileset.id] = tileset
 
@@ -84,8 +86,8 @@ def load_live_config():
     if "STORAGE_PGUSER" in os.environ:
         storage_args["username"] = os.environ["STORAGE_PGUSER"]
 
-    storage_pool = psycopg_pool.ConnectionPool(min_size=1, max_size=1, kwargs=storage_args)
-    storage = Storage(storage_pool)
+    storage_conn = psycopg.connect(**storage_args)
+    storage = Storage(storage_conn)
 
     # Storing the tileset in the dict allows some commonalities in code later
     tilesets[config.id] = Tileset.from_config(storage, config)

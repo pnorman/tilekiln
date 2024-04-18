@@ -3,7 +3,6 @@ import sys
 
 import click
 import psycopg
-import psycopg_pool
 
 import tilekiln
 
@@ -51,16 +50,16 @@ def tiles(config: int, num_threads: int,
 
     click.echo(f"Rendering {len(tiles)} tiles over {threads} threads")
 
-    pool = psycopg_pool.NullConnectionPool(kwargs={"dbname": storage_dbname,
-                                                   "host": storage_host,
-                                                   "port": storage_port,
-                                                   "user": storage_username})
-    storage = Storage(pool)
+    with (psycopg.connect(dbname=storage_dbname, host=storage_host,
+                          port=storage_port, user=storage_username) as storage_conn,
+          psycopg.connect(dbname=source_dbname, host=source_host,
+                          port=source_port, username=source_username) as gen_conn):
+        storage = Storage(storage_conn)
 
-    tileset = Tileset.from_config(storage, c)
-    gen_conn = psycopg.connect(dbname=source_dbname, host=source_host,
-                               port=source_port, username=source_username)
-    kiln = Kiln(c, gen_conn)
-    for tile in tiles:
-        mvt = kiln.render(tile)
-        tileset.save_tile(tile, mvt)
+        tileset = Tileset.from_config(storage, c)
+        gen_conn = psycopg.connect(dbname=source_dbname, host=source_host,
+                                   port=source_port, username=source_username)
+        kiln = Kiln(c, gen_conn)
+        for tile in tiles:
+            mvt = kiln.render(tile)
+            tileset.save_tile(tile, mvt)
