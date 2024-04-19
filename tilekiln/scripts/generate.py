@@ -2,14 +2,12 @@ import os
 import sys
 
 import click
-import psycopg
+from tqdm import tqdm
 
 import tilekiln
 
 from tilekiln.tile import Tile
-from tilekiln.tileset import Tileset
-from tilekiln.storage import Storage
-from tilekiln.kiln import Kiln
+import tilekiln.generator
 
 
 @click.group()
@@ -50,16 +48,12 @@ def tiles(config: int, num_threads: int,
 
     click.echo(f"Rendering {len(tiles)} tiles over {threads} threads")
 
-    with (psycopg.connect(dbname=storage_dbname, host=storage_host,
-                          port=storage_port, user=storage_username) as storage_conn,
-          psycopg.connect(dbname=source_dbname, host=source_host,
-                          port=source_port, username=source_username) as gen_conn):
-        storage = Storage(storage_conn)
-
-        tileset = Tileset.from_config(storage, c)
-        gen_conn = psycopg.connect(dbname=source_dbname, host=source_host,
-                                   port=source_port, username=source_username)
-        kiln = Kiln(c, gen_conn)
-        for tile in tiles:
-            mvt = kiln.render(tile)
-            tileset.save_tile(tile, mvt)
+    source_kwargs = {"dbname": storage_dbname,
+                     "host": storage_host,
+                     "port": storage_port,
+                     "user": storage_username}
+    storage_kwargs = {"dbname": source_dbname,
+                      "host": source_host,
+                      "port": source_port,
+                      "user": source_username}
+    tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tqdm(tiles), threads)
