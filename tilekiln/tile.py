@@ -1,5 +1,4 @@
 import pmtiles.tile  # type: ignore
-# TODO: __slots__?
 
 
 class Tile:
