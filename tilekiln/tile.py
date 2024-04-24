@@ -12,6 +12,9 @@ class Tile:
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.tileid == other.tileid
 
+    def __hash__(self):
+        return self.tileid
+
     @property
     def zxy(self):
         return pmtiles.tile.tileid_to_zxy(self.tileid)

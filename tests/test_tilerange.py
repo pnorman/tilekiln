@@ -24,6 +24,8 @@ class TestTilerange(TestCase):
         self.assertEqual(next(it1), Tile(1, 1, 0))
         self.assertRaises(StopIteration, next, it1)
 
+        self.assertEqual(len({Tile(0, 0, 0), Tile(1, 0, 0), Tile(1, 0, 0)}), 2)
+
         # If this were not evaluated lazily it would be slow
         it2 = iter(Tilerange(0, 30))
         self.assertEqual(next(it2), Tile(0, 0, 0))
