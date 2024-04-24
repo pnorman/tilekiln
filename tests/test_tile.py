@@ -3,7 +3,7 @@ from unittest import TestCase
 from tilekiln.tile import Tile
 
 
-class TestConfig(TestCase):
+class TestTile(TestCase):
     def test_properties(self):
         t = Tile(3, 2, 1)
         self.assertEqual(t.zoom, 3)
