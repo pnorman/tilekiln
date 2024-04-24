@@ -38,6 +38,7 @@ dependencies = [
     "fastapi",
     "fs",
     "Jinja2",
+    "pmtiles",
     "prometheus_client",
     "psycopg",
     "pyyaml",

@@ -1,18 +1,33 @@
-# TODO: Add dataclass
+import pmtiles.tile  # type: ignore
 # TODO: __slots__?
+
+
 class Tile:
+    __slots__ = ("tileid")
+
     def __init__(self, zoom: int, x: int, y: int):
         '''Creates a tile object, with x, y, and zoom
         '''
-        assert zoom >= 0
-        assert x >= 0
-        assert x < 2**zoom
-        assert y >= 0
-        assert y < 2**zoom
+        self.tileid = pmtiles.tile.zxy_to_tileid(zoom, x, y)
 
-        self.zoom = zoom
-        self.x = x
-        self.y = y
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.tileid == other.tileid
+
+    @property
+    def zxy(self):
+        return pmtiles.tile.tileid_to_zxy(self.tileid)
+
+    @property
+    def zoom(self):
+        return self.zxy[0]
+
+    @property
+    def x(self):
+        return self.zxy[1]
+
+    @property
+    def y(self):
+        return self.zxy[2]
 
     def __repr__(self) -> str:
         return f"Tile({self.zoom},{self.x},{self.y})"
@@ -21,6 +36,12 @@ class Tile:
     def from_string(cls, tile: str):
         fragments = tile.split("/")
         return cls(int(fragments[0]), int(fragments[1]), int(fragments[2]))
+
+    @classmethod
+    def from_tileid(cls, tileid: int):
+        # TODO: This converts id to xyz to id, there should be a way with less calls
+        (zoom, x, y) = pmtiles.tile.tileid_to_zxy(tileid)
+        return cls(zoom, x, y)
 
     def bbox(self, buffer) -> str:
         '''Returns the bounding box for a tile
