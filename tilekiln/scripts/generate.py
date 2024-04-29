@@ -85,11 +85,11 @@ def zooms(config: int, num_threads: int,
     threads = min(num_threads, len(tiles))  # No point in more threads than tiles
     click.echo(f"Rendering {len(tiles)} tiles over {threads} threads")
     source_kwargs = {"dbname": source_dbname,
-                      "host": source_host,
-                      "port": source_port,
-                      "user": source_username}
+                     "host": source_host,
+                     "port": source_port,
+                     "user": source_username}
     storage_kwargs = {"dbname": storage_dbname,
-                     "host": storage_host,
-                     "port": storage_port,
-                     "user": storage_username}
+                      "host": storage_host,
+                      "port": storage_port,
+                      "user": storage_username}
     tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tqdm(tiles), threads)
