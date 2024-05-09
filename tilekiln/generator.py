@@ -2,7 +2,7 @@
 The code here pulls creates multiple kilns to generate the tiles in parallel
 '''
 import multiprocessing as mp
-from typing import Iterable
+from collections.abc import Collection
 
 import psycopg
 
@@ -37,7 +37,12 @@ def worker(tile: Tile) -> None:
 
 
 def generate(config: Config, source_kwargs, storage_kwargs,  # type: ignore[no-untyped-def]
-             tiles: Iterable[Tile], num_processes: int) -> None:
+             tiles: Collection[Tile], num_processes: int) -> None:
+
+    # If there are no processes and no tiles then there's nothing to do.
+    if num_processes == 0 and len(tiles) == 0:
+        return
+
     with mp.Pool(num_processes, setup, (config, source_kwargs, storage_kwargs)) as pool:
         pool.imap_unordered(worker, tiles)
         pool.close()
