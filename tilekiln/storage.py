@@ -75,6 +75,7 @@ class Storage:
         with self.__conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
             cur.execute(f'''SELECT id, minzoom, maxzoom, tilejson
                             FROM "{self.__schema}"."{METADATA_TABLE}"''')
+            self.__conn.commit()
             for record in cur:
                 yield Tileset(self, record["id"], record["minzoom"], record["maxzoom"],
                               json.dumps(record["tilejson"]))
@@ -188,6 +189,7 @@ class Storage:
             cur.execute(f'''SELECT generated, tile FROM "{self.__schema}"."{id}"
                             WHERE zoom = %s AND x = %s AND y = %s''',
                         (tile.zoom, tile.x, tile.y), binary=True)
+            self.__conn.commit()
             result = cur.fetchone()
             if result is None:
                 return None, None
