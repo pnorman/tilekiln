@@ -5,6 +5,7 @@ from fs.memoryfs import MemoryFS
 
 from tilekiln.config import Config, LayerConfig
 from tilekiln.tile import Tile
+import tilekiln.errors
 
 
 class TestConfig(TestCase):
@@ -135,6 +136,18 @@ class TestConfig(TestCase):
         }
     ]
 }''')
+
+    def test_exceptions(self):
+        with MemoryFS() as fs:
+            # Check some invalid or silly YAML
+            self.assertRaises(tilekiln.errors.ConfigYAMLError, Config, '''{}''', fs)
+            self.assertRaises(tilekiln.errors.ConfigYAMLError, Config, '''? :''', fs)
+            self.assertRaises(tilekiln.errors.ConfigYAMLError, Config, ''':3c''', fs)
+
+            # Check ID
+            self.assertRaises(tilekiln.errors.ConfigYAMLError, Config, '''metadata: {}''', fs)
+            self.assertRaises(tilekiln.errors.ConfigYAMLError, Config,
+                              '''metadata: {id: 1}''', fs)
 
 
 class TestLayerConfig(TestCase):

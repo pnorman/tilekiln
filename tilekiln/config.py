@@ -2,6 +2,7 @@ import json
 import yaml
 
 from tilekiln.definition import Definition
+from tilekiln.errors import ConfigYAMLError
 from tilekiln.tile import Tile
 
 
@@ -11,14 +12,30 @@ class Config:
            Creates a config from the yaml string. Any SQL files referenced must be in the
            filesystem.
         '''
-        config = yaml.safe_load(yaml_string)
-        self.id = config["metadata"]["id"]
-        self.name = config["metadata"].get("name")
-        self.description = config["metadata"].get("description")
-        self.attribution = config["metadata"].get("attribution")
-        self.version = config["metadata"].get("version")
-        self.bounds = config["metadata"].get("bounds")
-        self.center = config["metadata"].get("center")
+
+        try:
+            config = yaml.safe_load(yaml_string)
+        except yaml.parser.ParserError:
+            raise ConfigYAMLError("Unable to parse config YAML")
+
+        try:
+            metadata = config["metadata"]
+        except Exception:
+            raise ConfigYAMLError("No metadata found in config") from None
+
+        try:
+            self.id = metadata["id"]
+        except Exception:
+            raise ConfigYAMLError("id not found in config metadata") from None
+        if not isinstance(self.id, str) or self.id is None:
+            raise ConfigYAMLError("metadata.id is not a string") from None
+
+        self.name = metadata.get("name")
+        self.description = metadata.get("description")
+        self.attribution = metadata.get("attribution")
+        self.version = metadata.get("version")
+        self.bounds = metadata.get("bounds")
+        self.center = metadata.get("center")
 
         # TODO: Make private and expose needed operations through proper functions
         self.layers = []
