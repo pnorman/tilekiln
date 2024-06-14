@@ -2,7 +2,7 @@ import json
 import yaml
 
 from tilekiln.definition import Definition
-from tilekiln.errors import ConfigYAMLError
+from tilekiln.errors import ConfigYAMLError, ConfigError
 from tilekiln.tile import Tile
 
 
@@ -36,11 +36,13 @@ class Config:
         self.version = metadata.get("version")
         self.bounds = metadata.get("bounds")
         self.center = metadata.get("center")
-
         # TODO: Make private and expose needed operations through proper functions
         self.layers = []
-        for id, l in config.get("vector_layers", {}).items():
-            self.layers.append(LayerConfig(id, l, filesystem))
+        try:
+            for id, l in config.get("vector_layers", {}).items():
+                self.layers.append(LayerConfig(id, l, filesystem))
+        except Exception:
+            raise ConfigError("Unable to process vector_layers")
 
         self.minzoom = None
         self.maxzoom = None
