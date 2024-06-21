@@ -1,7 +1,7 @@
 '''
 Custom exceptions used by tilekiln
 
-Exception
+Exception (base)
 |_ Error
    |_ConfigError
 '''
@@ -17,4 +17,12 @@ class ConfigError(Error):
 
 class ConfigYAMLError(ConfigError):
     ''' Errors where YAML is invalid, missing, or types are wrong'''
+    pass
+
+
+class ConfigLayerError(ConfigError):
+    pass
+
+
+class DefinitionError(ConfigLayerError):
     pass

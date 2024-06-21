@@ -1,5 +1,8 @@
 import jinja2 as j2
 
+import fs
+
+from tilekiln.errors import DefinitionError
 
 DEFAULT_EXTENT = 4096
 DEFAULT_BUFFER = 0
@@ -11,15 +14,27 @@ j2Environment = j2.Environment(loader=j2.BaseLoader(), lstrip_blocks=True, trim_
 
 
 class Definition:
-    def __init__(self, id, definition_yaml, filesystem):
+    def __init__(self, id: str, definition_yaml, filesystem: fs.base.FS):
         self.id = id
-        self.minzoom = definition_yaml["minzoom"]
-        self.maxzoom = definition_yaml["maxzoom"]
+
+        try:
+            self.minzoom = definition_yaml["minzoom"]
+        except KeyError:
+            raise DefinitionError(f"Layer {id} is missing minzoom on a definition") from None
+        try:
+            self.maxzoom = definition_yaml["maxzoom"]
+        except KeyError:
+            raise DefinitionError(f"Layer {id} is missing maxzoom on a definition") from None
+
         self.extent = definition_yaml.get("extent", DEFAULT_EXTENT)
         self.buffer = definition_yaml.get("buffer", DEFAULT_BUFFER)
 
         # TODO: Let is use directories so one file can include others.
-        self.__template = j2Environment.from_string(filesystem.readtext(definition_yaml["file"]))
+        filename = definition_yaml["file"]
+        try:
+            self.__template = j2Environment.from_string(filesystem.readtext(filename))
+        except fs.errors.ResourceNotFound:
+            raise DefinitionError(f"Layer {id} is missing is missing file {filename}") from None
 
     def render_sql(self, tile) -> str:
         '''Generate the SQL for a layer

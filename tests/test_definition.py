@@ -4,6 +4,7 @@ from fs.memoryfs import MemoryFS
 
 from tilekiln.definition import Definition
 from tilekiln.tile import Tile
+from tilekiln.errors import DefinitionError
 
 
 class TestDefinition(TestCase):
@@ -25,6 +26,19 @@ class TestDefinition(TestCase):
             self.assertEqual(d.maxzoom, 4)
             self.assertEqual(d.extent, 4096)
             self.assertEqual(d.buffer, 0)
+
+    def test_attribute_exceptions(self):
+        with MemoryFS() as fs:
+            fs.writetext("blank.sql.jinja2", "")
+            self.assertRaisesRegex(DefinitionError, 'maxzoom', Definition, "foo",
+                                   {"minzoom": 1, "extent": 1024, "buffer": 8,
+                                    "file": "blank.sql.jinja2"}, fs)
+            self.assertRaisesRegex(DefinitionError, 'minzoom', Definition, "foo",
+                                   {"maxzoom": 1, "extent": 1024, "buffer": 8,
+                                    "file": "blank.sql.jinja2"}, fs)
+            self.assertRaisesRegex(DefinitionError, 'missing.sql.jinja2', Definition, "foo",
+                                   {"minzoom": 1, "maxzoom": 2, "extent": 1024, "buffer": 8,
+                                    "file": "missing.sql.jinja2"}, fs)
 
     def test_render(self):
         with MemoryFS() as fs:
