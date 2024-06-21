@@ -1,13 +1,15 @@
 import json
 import yaml
 
+import fs
+
 from tilekiln.definition import Definition
 from tilekiln.errors import ConfigYAMLError, ConfigError
 from tilekiln.tile import Tile
 
 
 class Config:
-    def __init__(self, yaml_string, filesystem):
+    def __init__(self, yaml_string: str, filesystem: fs.base.FS):
         '''Create a config from a yaml string
            Creates a config from the yaml string. Any SQL files referenced must be in the
            filesystem.
@@ -44,11 +46,12 @@ class Config:
         except Exception:
             raise ConfigError("Unable to process vector_layers")
 
-        self.minzoom = None
-        self.maxzoom = None
         if self.layers:
             self.minzoom = min([layer.minzoom for layer in self.layers])
             self.maxzoom = max([layer.maxzoom for layer in self.layers])
+        else:
+            self.minzoom = None
+            self.maxzoom = None
 
     def tilejson(self, url) -> str:
         '''Returns a TileJSON'''
@@ -81,7 +84,7 @@ class Config:
 
 
 class LayerConfig:
-    def __init__(self, id, layer_yaml, filesystem):
+    def __init__(self, id: str, layer_yaml: dict, filesystem: fs.base.FS):
         '''Create a layer config
            Creates a layer config from the config yaml for a layer. Any SQL files referenced must
            be in the filesystem.
@@ -89,7 +92,7 @@ class LayerConfig:
         self.id = id
         self.description = layer_yaml.get("description")
         self.fields = layer_yaml.get("fields", {})
-        self.definitions = []
+        self.definitions: list[Definition] = []
         self.geometry_type = set(layer_yaml.get("geometry_type", []))
 
         self.__definitions = set()
@@ -99,7 +102,7 @@ class LayerConfig:
         self.minzoom = min({d.minzoom for d in self.__definitions})
         self.maxzoom = max({d.maxzoom for d in self.__definitions})
 
-    def render_sql(self, tile) -> str | None:
+    def render_sql(self, tile: Tile) -> str | None:
         '''Returns the SQL for a layer, given a tile, or None if it is outside the zoom range
            of the definitions
         '''
