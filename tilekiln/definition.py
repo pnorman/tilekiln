@@ -2,6 +2,7 @@ import jinja2 as j2
 
 import fs
 
+from tilekiln.tile import Tile
 from tilekiln.errors import DefinitionError
 
 DEFAULT_EXTENT = 4096
@@ -36,7 +37,7 @@ class Definition:
         except fs.errors.ResourceNotFound:
             raise DefinitionError(f"Layer {id} is missing is missing file {filename}") from None
 
-    def render_sql(self, tile) -> str:
+    def render_sql(self, tile: Tile) -> str:
         '''Generate the SQL for a layer
         '''
 
@@ -49,7 +50,8 @@ class Definition:
         inner = self.__template.render(zoom=tile.zoom, x=tile.x, y=tile.y,
                                        bbox=tile.bbox(self.buffer/self.extent),
                                        unbuffered_bbox=tile.bbox(0),
-                                       extent=self.extent, buffer=self.buffer,
+                                       extent=self.extent,
+                                       buffer=self.buffer,
                                        tile_length=tile_length(tile),
                                        tile_area=tile_length(tile)**2,
                                        coordinate_length=tile_length(tile)/self.extent,
@@ -61,7 +63,7 @@ class Definition:
                 '''FROM mvtgeom;''')
 
 
-def tile_length(tile):
+def tile_length(tile) -> float:
     '''Returns the length of a tile, in projected units
     '''
     # -1 for half vs full world
