@@ -1,5 +1,4 @@
 import datetime
-import gzip
 import json
 import sys
 from collections.abc import Iterator
@@ -193,7 +192,7 @@ class Storage:
             result = cur.fetchone()
             if result is None:
                 return None, None
-            return gzip.decompress(result["tile"]), result["generated"]
+            return result["tile"], result["generated"]
 
     # TODO: Needs to return timestamp written to the DB
     def save_tile(self, id: str, tile: Tile,
@@ -213,7 +212,7 @@ class Storage:
                         '''    THEN statement_timestamp()\n'''
                         '''    ELSE store.generated END\n'''
                         '''RETURNING generated''',
-                        (tile.zoom, tile.x, tile.y, gzip.compress(tiledata, mtime=0)))
+                        (tile.zoom, tile.x, tile.y, tiledata))
             result = cur.fetchone()
             self.__conn.commit()
             if result is None:
@@ -336,9 +335,6 @@ class Storage:
             cur.execute(f'''CREATE TABLE "{self.__schema}"."{tablename}"
                             PARTITION OF "{self.__schema}"."{id}"
                             FOR VALUES IN ({zoom})''')
-            # tile is already compressed, so tell postgres to not compress it again
-            cur.execute(f'''ALTER TABLE "{self.__schema}"."{tablename}"
-                            ALTER COLUMN tile SET STORAGE EXTERNAL''')
 
     def __load_metadata(self):
         '''Load the stored metadata.
