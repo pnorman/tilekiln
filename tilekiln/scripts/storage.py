@@ -1,7 +1,7 @@
 import sys
 
 import click
-import psycopg
+import psycopg_pool
 
 import tilekiln
 
@@ -37,9 +37,10 @@ def init(config: str,
 
     c = tilekiln.load_config(config)
 
-    with psycopg.connect(dbname=storage_dbname, host=storage_host,
-                         port=storage_port, user=storage_username) as conn:
-        storage = Storage(conn)
+    with psycopg_pool.ConnectionPool(kwargs={"dbname": storage_dbname, "host": storage_host,
+                                             "port": storage_port, "user": storage_username
+                                             }) as pool:
+        storage = Storage(pool)
         storage.create_schema()
         tileset = Tileset.from_config(storage, c)
         tileset.prepare_storage()
@@ -65,9 +66,10 @@ def destroy(config: str,
         c = tilekiln.load_config(config)
         id = c.id
 
-    with psycopg.connect(dbname=storage_dbname, host=storage_host,
-                         port=storage_port, user=storage_username) as conn:
-        storage = Storage(conn)
+    with psycopg_pool.ConnectionPool(kwargs={"dbname": storage_dbname, "host": storage_host,
+                                             "port": storage_port, "user": storage_username
+                                             }) as pool:
+        storage = Storage(pool)
         storage.remove_tileset(id)
 
 
@@ -95,8 +97,9 @@ def delete(config: str,
         c = tilekiln.load_config(config)
         id = c.id
 
-    with psycopg.connect(dbname=storage_dbname, host=storage_host,
-                         port=storage_port, user=storage_username) as conn:
+    with psycopg_pool.ConnectionPool(kwargs={"dbname": storage_dbname, "host": storage_host,
+                                             "port": storage_port, "user": storage_username
+                                             }) as conn:
         storage = Storage(conn)
 
         if (len(zoom) == 0):
@@ -129,9 +132,10 @@ def tiledelete(config: str,
         c = tilekiln.load_config(config)
         id = c.id
 
-    with psycopg.connect(dbname=storage_dbname, host=storage_host,
-                         port=storage_port, user=storage_username) as conn:
-        storage = Storage(conn)
+    with psycopg_pool.ConnectionPool(kwargs={"dbname": storage_dbname, "host": storage_host,
+                                             "port": storage_port, "user": storage_username
+                                             }) as pool:
+        storage = Storage(pool)
 
         # TODO: This requires reading all of stdin before starting. This lets it display
         # how many tiles to delete but also means it has to read them all in before starting

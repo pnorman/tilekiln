@@ -41,6 +41,7 @@ dependencies = [
     "pmtiles",
     "prometheus_client",
     "psycopg",
+    "psycopg_pool",
     "pyyaml",
     "tqdm",
     "uvicorn",

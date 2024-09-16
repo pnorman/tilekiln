@@ -1,6 +1,6 @@
 import os
 
-import psycopg
+import psycopg_pool
 from fastapi import FastAPI, Response, HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -36,10 +36,10 @@ def load_config():
     # Because the DB connection variables are passed as standard PG* vars,
     # a plain connect() will connect to the right DB
 
-    conn = psycopg.connect()
+    pool = psycopg_pool.ConnectionPool()
 
     global kiln
-    kiln = Kiln(config, conn)
+    kiln = Kiln(config, pool)
 
 
 @dev.head("/")

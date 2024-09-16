@@ -4,7 +4,7 @@ The code here pulls creates multiple kilns to generate the tiles in parallel
 import multiprocessing as mp
 from collections.abc import Collection
 
-import psycopg
+import psycopg_pool
 
 from tilekiln.config import Config
 from tilekiln.kiln import Kiln
@@ -22,11 +22,11 @@ def setup(config: Config, source_kwargs, storage_kwargs) -> None:  # type: ignor
     Sets up the kiln and tileset for the worker function.
     '''
     global kiln, tileset
-    source_conn = psycopg.connect(**source_kwargs)
-    kiln = Kiln(config, source_conn)
+    source_pool = psycopg_pool.ConnectionPool(kwargs=source_kwargs)
+    kiln = Kiln(config, source_pool)
 
-    storage_conn = psycopg.connect(**storage_kwargs)
-    storage = Storage(storage_conn)
+    storage_pool = psycopg_pool.ConnectionPool(kwargs=storage_kwargs)
+    storage = Storage(storage_pool)
     tileset = Tileset.from_config(storage, config)
 
 

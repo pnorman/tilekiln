@@ -1,5 +1,5 @@
 import click
-import psycopg
+import psycopg_pool
 
 import tilekiln
 import tilekiln.dev
@@ -44,11 +44,11 @@ cli.add_command(tilekiln.scripts.serve.serve)
 def prometheus(bind_host: str, bind_port: int, storage_dbname: str, storage_host: str,
                storage_port: int, storage_username: str) -> None:
     '''Run a prometheus exporter for metrics on tiles.'''
-    with psycopg.connect(dbname=storage_dbname,
-                         host=storage_host,
-                         port=storage_port,
-                         user=storage_username) as conn:
-        storage = Storage(conn)
+    with psycopg_pool.ConnectionPool(kwargs={"dbname": storage_dbname,
+                                             "host": storage_host,
+                                             "port": storage_port,
+                                             "user": storage_username}) as pool:
+        storage = Storage(pool)
 
         # tilekiln.prometheus brings in a bunch of stuff, so only do this
         # for this command
