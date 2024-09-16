@@ -152,8 +152,8 @@ class Storage:
                 if result is None:
                     # TODO: raise exception and handle it at the calling level
                     click.echo(f"Failed to retrieve minzoom for id {id}, "
-                            f"does it exist in storage DB?",
-                            err=True)
+                               f"does it exist in storage DB?",
+                               err=True)
                     sys.exit(1)
                 return result["minzoom"]
 
