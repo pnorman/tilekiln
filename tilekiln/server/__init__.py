@@ -145,7 +145,11 @@ def serve_tile(prefix: str, zoom: int, x: int, y: int):
     if prefix not in tilesets:
         raise HTTPException(status_code=404, detail=f"Tileset {prefix} not found on server.")
 
-    tile, generated = tilesets[prefix].get_tile(Tile(zoom, x, y))
+    try:
+        tile, generated = tilesets[prefix].get_tile(Tile(zoom, x, y))
+    except tilekiln.errors.ZoomNotDefined:
+        raise HTTPException(status_code=410,
+                            detail=f'''Tileset {zoom} not available for tileset {prefix}.''')
 
     if tile is None:
         raise HTTPException(status_code=404,
@@ -169,7 +173,11 @@ def live_serve_tile(prefix: str, zoom: int, x: int, y:  int):
         raise HTTPException(status_code=404, detail=f"Tileset {prefix} not found on server.")
 
     # Attempt to serve a stored tile
-    existing, generated = tilesets[prefix].get_tile(Tile(zoom, x, y))
+    try:
+        existing, generated = tilesets[prefix].get_tile(Tile(zoom, x, y))
+    except tilekiln.errors.ZoomNotDefined:
+        raise HTTPException(status_code=410,
+                            detail=f'''Tileset {zoom} not available for tileset {prefix}.''')
 
     # Handle storage hits
     if existing is not None:

@@ -1,6 +1,7 @@
 import psycopg
 import psycopg_pool
 
+import tilekiln.errors
 from tilekiln.config import Config
 from tilekiln.tile import Tile
 
@@ -15,6 +16,9 @@ class Kiln:
         self.__pool = pool
 
     def render(self, tile: Tile) -> bytes:
+        if tile.zoom < self.__config.minzoom or tile.zoom > self.__config.maxzoom:
+            raise tilekiln.errors.ZoomNotDefined
+
         with self.__pool.connection() as conn:
             with conn.cursor() as curs:
                 result = b''

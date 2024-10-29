@@ -4,6 +4,7 @@ Custom exceptions used by tilekiln
 Exception (base)
 |_ Error
    |_ConfigError
+   |_RuntimeError
 '''
 
 
@@ -25,4 +26,12 @@ class ConfigLayerError(ConfigError):
 
 
 class DefinitionError(ConfigLayerError):
+    pass
+
+
+class RuntimeError(Error):
+    pass
+
+
+class ZoomNotDefined(RuntimeError):
     pass

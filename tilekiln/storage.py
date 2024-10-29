@@ -7,6 +7,8 @@ import click
 import psycopg.rows
 import psycopg_pool
 
+import tilekiln.errors
+
 from tilekiln.metric import Metric
 from tilekiln.tile import Tile
 from tilekiln.tileset import Tileset
@@ -194,9 +196,13 @@ class Storage:
     def get_tile(self, id: str, tile: Tile) -> tuple[bytes | None, datetime.datetime | None]:
         with self.__pool.connection() as conn:
             with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
-                cur.execute(f'''SELECT generated, tile FROM "{self.__schema}"."{id}"
-                                WHERE zoom = %s AND x = %s AND y = %s''',
-                            (tile.zoom, tile.x, tile.y), binary=True)
+                try:
+                    cur.execute(f'''SELECT generated, tile FROM "{self.__schema}"."{id}"
+                                    WHERE zoom = %s AND x = %s AND y = %s''',
+                                (tile.zoom, tile.x, tile.y), binary=True)
+                except psycopg.errors.UndefinedTable:
+                    raise tilekiln.errors.ZoomNotDefined
+
                 result = cur.fetchone()
                 if result is None:
                     return None, None
@@ -212,16 +218,19 @@ class Storage:
                 # return zero rows if the contents are the same. The method here instead results
                 # in extra writes but does preserve the datetime.
                 tablename = f"{id}_z{tile.zoom}"
-                cur.execute(f'''INSERT INTO "{self.__schema}"."{tablename}" AS store\n'''
-                            '''(zoom, x, y, tile)\n'''
-                            '''VALUES (%s, %s, %s, %s)\n'''
-                            '''ON CONFLICT (zoom, x, y)\n'''
-                            '''DO UPDATE SET tile = EXCLUDED.tile,\n'''
-                            '''generated = CASE WHEN store.tile != EXCLUDED.tile\n'''
-                            '''    THEN statement_timestamp()\n'''
-                            '''    ELSE store.generated END\n'''
-                            '''RETURNING generated''',
-                            (tile.zoom, tile.x, tile.y, tiledata))
+                try:
+                    cur.execute(f'''INSERT INTO "{self.__schema}"."{tablename}" AS store\n'''
+                                '''(zoom, x, y, tile)\n'''
+                                '''VALUES (%s, %s, %s, %s)\n'''
+                                '''ON CONFLICT (zoom, x, y)\n'''
+                                '''DO UPDATE SET tile = EXCLUDED.tile,\n'''
+                                '''generated = CASE WHEN store.tile != EXCLUDED.tile\n'''
+                                '''    THEN statement_timestamp()\n'''
+                                '''    ELSE store.generated END\n'''
+                                '''RETURNING generated''',
+                                (tile.zoom, tile.x, tile.y, tiledata))
+                except psycopg.errors.UndefinedTable:
+                    raise tilekiln.errors.ZoomNotDefined
                 result = cur.fetchone()
                 if result is None:
                     return None

@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import datetime
 
+import tilekiln.errors
 from tilekiln.config import Config
 from tilekiln.tile import Tile
 
@@ -52,6 +53,8 @@ class Tileset:
                                   self.tilejson)
 
     def get_tile(self, tile: Tile) -> tuple[bytes | None, datetime.datetime | None]:
+        if tile.zoom < self.minzoom or tile.zoom > self.maxzoom:
+            raise tilekiln.errors.ZoomNotDefined
         return self.storage.get_tile(self.id, tile)
 
     def save_tile(self, tile: Tile, data: bytes) -> datetime.datetime | None:
