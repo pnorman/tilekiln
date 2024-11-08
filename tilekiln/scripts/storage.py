@@ -37,7 +37,9 @@ def init(config: str,
 
     c = tilekiln.load_config(config)
 
-    with psycopg_pool.ConnectionPool(kwargs={"dbname": storage_dbname, "host": storage_host,
+    with psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
+                                     check=psycopg_pool.ConnectionPool.check_connection,
+                                     kwargs={"dbname": storage_dbname, "host": storage_host,
                                              "port": storage_port, "user": storage_username
                                              }) as pool:
         storage = Storage(pool)
@@ -66,7 +68,9 @@ def destroy(config: str,
         c = tilekiln.load_config(config)
         id = c.id
 
-    with psycopg_pool.ConnectionPool(kwargs={"dbname": storage_dbname, "host": storage_host,
+    with psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
+                                     check=psycopg_pool.ConnectionPool.check_connection,
+                                     kwargs={"dbname": storage_dbname, "host": storage_host,
                                              "port": storage_port, "user": storage_username
                                              }) as pool:
         storage = Storage(pool)
@@ -97,7 +101,9 @@ def delete(config: str,
         c = tilekiln.load_config(config)
         id = c.id
 
-    with psycopg_pool.ConnectionPool(kwargs={"dbname": storage_dbname, "host": storage_host,
+    with psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
+                                     check=psycopg_pool.ConnectionPool.check_connection,
+                                     kwargs={"dbname": storage_dbname, "host": storage_host,
                                              "port": storage_port, "user": storage_username
                                              }) as conn:
         storage = Storage(conn)
@@ -132,7 +138,9 @@ def tiledelete(config: str,
         c = tilekiln.load_config(config)
         id = c.id
 
-    with psycopg_pool.ConnectionPool(kwargs={"dbname": storage_dbname, "host": storage_host,
+    with psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
+                                     check=psycopg_pool.ConnectionPool.check_connection,
+                                     kwargs={"dbname": storage_dbname, "host": storage_host,
                                              "port": storage_port, "user": storage_username
                                              }) as pool:
         storage = Storage(pool)

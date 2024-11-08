@@ -22,10 +22,14 @@ def setup(config: Config, source_kwargs, storage_kwargs) -> None:  # type: ignor
     Sets up the kiln and tileset for the worker function.
     '''
     global kiln, tileset
-    source_pool = psycopg_pool.ConnectionPool(kwargs=source_kwargs)
+    source_pool = psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
+                                              check=psycopg_pool.ConnectionPool.check_connection,
+                                              kwargs=source_kwargs)
     kiln = Kiln(config, source_pool)
 
-    storage_pool = psycopg_pool.ConnectionPool(kwargs=storage_kwargs)
+    storage_pool = psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
+                                               check=psycopg_pool.ConnectionPool.check_connection,
+                                               kwargs=storage_kwargs)
     storage = Storage(storage_pool)
     tileset = Tileset.from_config(storage, config)
 

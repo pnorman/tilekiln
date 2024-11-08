@@ -36,7 +36,8 @@ def load_config():
     # Because the DB connection variables are passed as standard PG* vars,
     # a plain connect() will connect to the right DB
 
-    pool = psycopg_pool.ConnectionPool()
+    pool = psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
+                                       check=psycopg_pool.ConnectionPool.check_connection)
 
     global kiln
     kiln = Kiln(config, pool)

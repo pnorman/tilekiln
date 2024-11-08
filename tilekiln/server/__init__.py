@@ -51,9 +51,7 @@ def load_server_config():
     global tilesets
     # Because the DB connection variables are passed as standard PG* vars,
     # a plain ConnectionPool() will connect to the right DB
-    conn = psycopg_pool.ConnectionPool(min_size=1,
-                                       max_size=1,
-                                       num_workers=1,
+    conn = psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
                                        check=psycopg_pool.ConnectionPool.check_connection)
     # TODO: Make readonly?
 
@@ -89,21 +87,17 @@ def load_live_config():
     if "STORAGE_PGUSER" in os.environ:
         storage_args["username"] = os.environ["STORAGE_PGUSER"]
 
-    storage_pool = psycopg_pool.ConnectionPool(kwargs=storage_args,
-                                               min_size=1,
-                                               max_size=1,
-                                               num_workers=1,
-                                               check=psycopg_pool.ConnectionPool.check_connection)
+    storage_pool = psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
+                                               check=psycopg_pool.ConnectionPool.check_connection,
+                                               kwargs=storage_args)
 
     storage = Storage(storage_pool)
 
     # Storing the tileset in the dict allows some commonalities in code later
     tilesets[config.id] = Tileset.from_config(storage, config)
-    generate_pool = psycopg_pool.ConnectionPool(kwargs=generate_args,
-                                                min_size=1,
-                                                max_size=1,
-                                                num_workers=1,
-                                                check=psycopg_pool.ConnectionPool.check_connection)
+    generate_pool = psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
+                                                check=psycopg_pool.ConnectionPool.check_connection,
+                                                kwargs=generate_args)
     global kiln
     kiln = Kiln(config, generate_pool)
 
