@@ -33,9 +33,11 @@ def generate() -> None:
 @click.option('--storage-host')
 @click.option('--storage-port')
 @click.option('--storage-username')
+@click.option('--progress/--no-progress', help='Display progress bar')
 def tiles(config: int, num_threads: int,
           source_dbname: str, source_host: str, source_port: int, source_username: str,
-          storage_dbname: str, storage_host: str, storage_port: int, storage_username: str) -> None:
+          storage_dbname: str, storage_host: str, storage_port: int, storage_username: str,
+          progress: bool) -> None:
     '''Generate specific tiles.
 
     A list of z/x/y tiles is read from stdin and those tiles are generated and saved
@@ -57,7 +59,10 @@ def tiles(config: int, num_threads: int,
                       "host": storage_host,
                       "port": storage_port,
                       "user": storage_username}
-    tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tqdm(tiles), threads)
+    if progress:
+        tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tqdm(tiles), threads)
+    else:
+        tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tiles, threads)
 
 
 @generate.command()
@@ -74,10 +79,11 @@ def tiles(config: int, num_threads: int,
 @click.option('--storage-username')
 @click.option('--min-zoom', type=click.INT, required=True)
 @click.option('--max-zoom', type=click.INT, required=True)
+@click.option('--progress/--no-progress', help='Display progress bar')
 def zooms(config: int, num_threads: int,
           source_dbname: str, source_host: str, source_port: int, source_username: str,
           storage_dbname: str, storage_host: str, storage_port: int, storage_username: str,
-          min_zoom: int, max_zoom: int) -> None:
+          min_zoom: int, max_zoom: int, progress: bool) -> None:
 
     c = tilekiln.load_config(config)
 
@@ -92,4 +98,7 @@ def zooms(config: int, num_threads: int,
                       "host": storage_host,
                       "port": storage_port,
                       "user": storage_username}
-    tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tqdm(tiles), threads)
+    if progress:
+        tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tqdm(tiles), threads)
+    else:
+        tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tiles, threads)

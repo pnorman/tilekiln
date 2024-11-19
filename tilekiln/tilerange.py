@@ -12,3 +12,6 @@ class Tilerange():
 
     def __len__(self):
         return self.maxid - self.minid
+
+    def __contains__(self, value):
+        raise NotImplementedError
