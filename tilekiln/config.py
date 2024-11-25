@@ -79,8 +79,7 @@ class Config:
                           sort_keys=True, indent=4)
 
     def layer_queries(self, tile: Tile):
-        return {layer.render_sql(tile) for layer in self.layers
-                if layer.render_sql(tile) is not None}
+        return list(filter(None, (layer.render_sql(tile) for layer in self.layers)))
 
 
 class LayerConfig:
