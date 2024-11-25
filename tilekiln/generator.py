@@ -48,6 +48,6 @@ def generate(config: Config, source_kwargs, storage_kwargs,  # type: ignore[no-u
         return
 
     with mp.Pool(num_processes, setup, (config, source_kwargs, storage_kwargs)) as pool:
-        pool.imap_unordered(worker, tiles)
+        pool.imap_unordered(worker, tiles, 100)
         pool.close()
         pool.join()
