@@ -44,7 +44,8 @@ cli.add_command(tilekiln.scripts.serve.serve)
 def prometheus(bind_host: str, bind_port: int, storage_dbname: str, storage_host: str,
                storage_port: int, storage_username: str) -> None:
     '''Run a prometheus exporter for metrics on tiles.'''
-    with psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
+    # The prometheus exporter sometimes needs multiple connections
+    with psycopg_pool.ConnectionPool(min_size=3, max_size=3, num_workers=1,
                                      check=psycopg_pool.ConnectionPool.check_connection,
                                      kwargs={"dbname": storage_dbname,
                                              "host": storage_host,
