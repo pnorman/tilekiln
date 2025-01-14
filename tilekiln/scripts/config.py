@@ -45,14 +45,16 @@ def sql(config: str, layer: str, zoom: int, x: int, y: int):
         return 0
     else:
         # Iterate through the layers to find the right one
-        for lc in c.layers:
-            if lc.id == layer:
-                sql = lc.render_sql(Tile(zoom, x, y))
-                if sql is None:
-                    click.echo((f"Zoom {zoom} not between min zoom {lc.minzoom} "
-                                f"and max zoom {lc.maxzoom} for layer {layer}."), err=True)
-                    return 1
-                click.echo(sql)
-                return 0
-        click.echo(f"Layer '{layer}' not found in configuration", err=True)
-        return 1
+        try:
+            lc = c.__layers[layer]
+        except KeyError:
+            click.echo(f"Layer '{layer}' not found in configuration", err=True)
+            return 1
+
+        sql = lc.render_sql(Tile(zoom, x, y))
+        if sql is None:
+            click.echo((f"Zoom {zoom} not between min zoom {lc.minzoom} "
+                        f"and max zoom {lc.maxzoom} for layer {layer}."), err=True)
+            return 1
+        click.echo(sql)
+        return 0

@@ -38,17 +38,18 @@ class Config:
         self.version = metadata.get("version")
         self.bounds = metadata.get("bounds")
         self.center = metadata.get("center")
-        # TODO: Make private and expose needed operations through proper functions
-        self.layers = []
+        self.__layers = {}
         try:
             for id, l in config.get("vector_layers", {}).items():
-                self.layers.append(LayerConfig(id, l, filesystem))
+                lc = LayerConfig(id, l, filesystem)
+                self.__layers[lc.id] = lc
+
         except Exception:
             raise ConfigError("Unable to process vector_layers")
 
-        if self.layers:
-            self.minzoom = min([layer.minzoom for layer in self.layers])
-            self.maxzoom = max([layer.maxzoom for layer in self.layers])
+        if self.__layers:
+            self.minzoom = min([layer.minzoom for layer in self.__layers.values()])
+            self.maxzoom = max([layer.maxzoom for layer in self.__layers.values()])
         else:
             self.minzoom = None
             self.maxzoom = None
@@ -71,15 +72,18 @@ class Config:
                           "fields": layer.fields,
                           "description": layer.description,
                           "minzoom": layer.minzoom,
-                          "maxzoom": layer.maxzoom} for layer in self.layers]
+                          "maxzoom": layer.maxzoom} for layer in self.__layers.values()]
         result["vector_layers"] = [{k: v for k, v in layer.items() if v is not None}
                                    for layer in vector_layers]
 
         return json.dumps({k: v for k, v in result.items() if v is not None},
                           sort_keys=True, indent=4)
 
+    def layer_names(self):
+        return [layer.name for layer in self.__layers.values()]
+
     def layer_queries(self, tile: Tile):
-        return list(filter(None, (layer.render_sql(tile) for layer in self.layers)))
+        return list(filter(None, (layer.render_sql(tile) for layer in self.__layers.values())))
 
 
 class LayerConfig:
