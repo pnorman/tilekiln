@@ -45,7 +45,7 @@ class TestDefinition(TestCase):
             fs.writetext("one.sql.jinja2", "SELECT 1")
             d = Definition("one", {"minzoom": 1, "maxzoom": 3, "extent": 1024, "buffer": 8,
                                    "file": "one.sql.jinja2"}, fs)
-            expected = '''WITH mvtgeom AS
+            expected = '''WITH mvtgeom AS -- one/2/0/0
 (
 SELECT 1
 )
@@ -57,7 +57,7 @@ FROM mvtgeom;'''
                                            "{{unbuffered_bbox}}\n{{extent}}\n{{buffer}}")
             d = Definition("two", {"minzoom": 1, "maxzoom": 3, "extent": 1024, "buffer": 256,
                                    "file": "two.sql.jinja2"}, fs)
-            expected = '''WITH mvtgeom AS
+            expected = '''WITH mvtgeom AS -- two/2/0/1
 (
 SELECT 2/0/1
 ST_TileEnvelope(2, 0, 1, margin=>0.25)
@@ -74,7 +74,7 @@ FROM mvtgeom;'''
             d = Definition("units", {"minzoom": 1, "maxzoom": 3, "extent": 1024, "buffer": 256,
                                      "file": "units.sql.jinja2"}, fs)
             # Crudely slice up the string to turn it into numbers
-            expected = '''WITH mvtgeom AS
+            expected = '''WITH mvtgeom AS -- units/2/0/1
 (
 10018754.17
 100375435118892.39
@@ -89,7 +89,7 @@ FROM mvtgeom;'''
             d = Definition("whitespace", {"minzoom": 1, "maxzoom": 3, "extent": 1024, "buffer": 256,
                                           "file": "whitespace.sql.jinja2"}, fs)
             # Crudely slice up the string to turn it into numbers
-            expected = '''WITH mvtgeom AS
+            expected = '''WITH mvtgeom AS -- whitespace/2/0/1
 (
 foo
 bar

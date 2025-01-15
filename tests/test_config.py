@@ -170,13 +170,13 @@ class TestLayerConfig(TestCase):
             self.assertIsNone(layer.render_sql(Tile(5, 0, 0)))
             self.assertIsNone(layer.render_sql(Tile(7, 0, 0)))
 
-            self.assertEqual(layer.render_sql(Tile(4, 0, 0)), '''WITH mvtgeom AS
+            self.assertEqual(layer.render_sql(Tile(4, 0, 0)), '''WITH mvtgeom AS -- foo/4/0/0
 (
 one
 )
 SELECT ST_AsMVT(mvtgeom.*, 'foo', 4096)
 FROM mvtgeom;''')
-            self.assertEqual(layer.render_sql(Tile(6, 0, 0)), '''WITH mvtgeom AS
+            self.assertEqual(layer.render_sql(Tile(6, 0, 0)), '''WITH mvtgeom AS -- foo/6/0/0
 (
 two
 )

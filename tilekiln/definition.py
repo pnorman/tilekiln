@@ -58,8 +58,8 @@ class Definition:
                                        coordinate_area=(tile_length(tile)/self.extent)**2)
 
         # TODO: Use proper escaping for self.id in SQL
-        return ('''WITH mvtgeom AS\n(\n''' + inner + '''\n)\n''' +
-                f'''SELECT ST_AsMVT(mvtgeom.*, '{self.id}', {self.extent})\n''' +
+        return (f'''WITH mvtgeom AS -- {self.id}/{tile.zoom}/{tile.x}/{tile.y}\n(\n''' +
+                inner + f'''\n)\nSELECT ST_AsMVT(mvtgeom.*, '{self.id}', {self.extent})\n''' +
                 '''FROM mvtgeom;''')
 
 
