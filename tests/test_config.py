@@ -58,6 +58,14 @@ class TestConfig(TestCase):
             self.assertEqual(c.minzoom, 13)
             self.assertEqual(c.maxzoom, 14)
 
+            self.assertSequenceEqual([*c.layer_names()], ["building"])
+
+            self.assertEqual(c.layer_query("building", Tile(13, 0, 0)),
+                             "WITH mvtgeom AS -- building/13/0/0\n(\n\n)\n"
+                             "SELECT ST_AsMVT(mvtgeom.*, 'building', 4096)\nFROM mvtgeom;")
+            self.assertEqual(c.layer_query("building", Tile(13, 0, 0)),
+                             c.layer_queries(Tile(13, 0, 0))["building"])
+
             self.assertEqual(c.tilejson("foo"), '''{
     "attribution": "attribution",
     "bounds": [
@@ -148,6 +156,18 @@ class TestConfig(TestCase):
             self.assertRaises(tilekiln.errors.ConfigYAMLError, Config, '''metadata: {}''', fs)
             self.assertRaises(tilekiln.errors.ConfigYAMLError, Config,
                               '''metadata: {id: 1}''', fs)
+
+            fs.writetext("blank.sql.jinja2", "")
+            c_str = ('''{"metadata": {"id":"id", '''
+                     '''"name": "name", '''
+                     '''"description":"description", '''
+                     '''"attribution":"attribution", "version": "1.0.0",'''
+                     '''"bounds": [-180, -85, 180, 85], "center": [0, 0]},'''
+                     '''"vector_layers": {"\"":{'''
+                     '''"description": "buildings",'''
+                     '''"fields":{"foo": "bar"},'''
+                     '''"sql": [{"minzoom":13, "maxzoom":14, "file": "blank.sql.jinja2"}]}}}''')
+            self.assertRaises(tilekiln.errors.ConfigError, Config, c_str, fs)
 
 
 class TestLayerConfig(TestCase):

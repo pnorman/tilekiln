@@ -15,19 +15,25 @@ class Kiln:
         self.__config = config
         self.__pool = pool
 
-    def render(self, tile: Tile) -> bytes:
+    def render_all(self, tile: Tile) -> dict[str, bytes]:
         if tile.zoom < self.__config.minzoom or tile.zoom > self.__config.maxzoom:
             raise tilekiln.errors.ZoomNotDefined
 
         with self.__pool.connection() as conn:
             with conn.cursor() as curs:
-                result = b''
-                for sql in self.__config.layer_queries(tile):
-                    result += self.__render_layer(curs, sql)
+                return {name: self.__render_sql(curs, sql)
+                        for name, sql in self.__config.layer_queries(tile).items()}
 
-        return result
+    def render_layer(self, layer: str, tile: Tile) -> bytes:
+        with self.__pool.connection() as conn:
+            with conn.cursor() as curs:
+                return self.__render_sql(curs, self.__config.layer_query(layer, tile))
 
-    def __render_layer(self, curs: psycopg.Cursor, sql: str) -> bytes:
+    def __render_sql(self, curs: psycopg.Cursor, sql: str | None) -> bytes:
+        if sql is None:
+            # None is a query for a layer not present in this zoom
+            return b''
+
         curs.execute(sql, binary=True)
         for record in curs:
             return record[0]

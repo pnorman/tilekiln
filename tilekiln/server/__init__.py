@@ -155,7 +155,7 @@ def serve_tile(prefix: str, zoom: int, x: int, y: int):
     if generated is not None:
         headers = {"Last-Modified": generated.strftime(HTTP_TIME),
                    "E-tag": generated.strftime("%s.%f")}
-    return Response(tile, media_type=MVT_MIME_TYPE,
+    return Response(b''.join(tile.values()), media_type=MVT_MIME_TYPE,
                     headers=STANDARD_HEADERS | headers)
 
 
@@ -179,18 +179,18 @@ def live_serve_tile(prefix: str, zoom: int, x: int, y:  int):
         if generated is not None:
             headers = {"Last-Modified": generated.strftime(HTTP_TIME),
                        "E-tag": generated.strftime("%s.%f")}
-        return Response(existing, media_type=MVT_MIME_TYPE,
+        return Response(b''.join(existing.values()), media_type=MVT_MIME_TYPE,
                         headers=STANDARD_HEADERS | headers)
 
     # Storage miss, so generate a new tile
     global kiln
     tile = Tile(zoom, x, y)
-    response = kiln.render(tile)
+    layers = kiln.render_all(tile)
     # TODO: Make async so tile is saved and response returned in parallel
-    generated = tilesets[prefix].save_tile(tile, response)
+    generated = tilesets[prefix].save_tile(tile, layers)
     if generated is not None:
         headers = {"Last-Modified": generated.strftime(HTTP_TIME),
                    "E-tag": generated.strftime("%s.%f")}
-    return Response(response,
+    return Response(b''.join(layers.values()),
                     media_type=MVT_MIME_TYPE,
                     headers=STANDARD_HEADERS | headers)

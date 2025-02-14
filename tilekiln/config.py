@@ -41,6 +41,12 @@ class Config:
         self.__layers = {}
         try:
             for id, l in config.get("vector_layers", {}).items():
+                if "\"" in id:
+                    raise ConfigError(f"Illegal character \" found in layer name: f{id}")
+                if "'" in id:
+                    raise ConfigError(f"Illegal character ' found in layer name: f{id}")
+                if '\\' in id:
+                    raise ConfigError(f"Illegal character \\ found in layer name: f{id}")
                 lc = LayerConfig(id, l, filesystem)
                 self.__layers[lc.id] = lc
 
@@ -80,10 +86,18 @@ class Config:
                           sort_keys=True, indent=4)
 
     def layer_names(self):
-        return [layer.name for layer in self.__layers.values()]
+        return [id for id in self.__layers.keys()]
 
-    def layer_queries(self, tile: Tile):
-        return list(filter(None, (layer.render_sql(tile) for layer in self.__layers.values())))
+    def layer_query(self, layer: str, tile: Tile) -> str:
+        return self.__layers[layer].render_sql(tile)
+
+    def layer_queries(self, tile: Tile) -> dict[str, str | None]:
+        '''Returns queries for layers
+
+        For layers defined in the config but not present at this zoom None is returned
+        '''
+        return {name: layer.render_sql(tile)
+                for name, layer in self.__layers.items()}
 
 
 class LayerConfig:
@@ -112,6 +126,7 @@ class LayerConfig:
         if tile.zoom > self.maxzoom or tile.zoom < self.minzoom:
             return None
 
+        # Match the first definition for the layer
         for d in self.__definitions:
             if tile.zoom <= d.maxzoom and tile.zoom >= d.minzoom:
                 return d.render_sql(tile)

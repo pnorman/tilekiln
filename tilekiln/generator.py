@@ -36,8 +36,12 @@ def setup(config: Config, source_kwargs, storage_kwargs) -> None:  # type: ignor
 
 def worker(tile: Tile) -> None:
     global kiln, tileset
-    mvt = kiln.render(tile)
-    tileset.save_tile(tile, mvt)
+    try:
+        mvt = kiln.render_all(tile)
+        tileset.save_tile(tile, mvt)
+    except Exception as e:
+        print(f"Error generating {tile}")
+        raise RuntimeError(f"Error generating {tile}") from e
 
 
 def generate(config: Config, source_kwargs, storage_kwargs,  # type: ignore[no-untyped-def]
@@ -48,6 +52,10 @@ def generate(config: Config, source_kwargs, storage_kwargs,  # type: ignore[no-u
         return
 
     with mp.Pool(num_processes, setup, (config, source_kwargs, storage_kwargs)) as pool:
-        pool.imap_unordered(worker, tiles, 100)
+        imap_it = pool.imap_unordered(worker, tiles, 100)
         pool.close()
         pool.join()
+
+        # Check for exceptions
+        for x in imap_it:
+            pass
