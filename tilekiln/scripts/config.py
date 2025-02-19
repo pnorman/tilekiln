@@ -40,21 +40,19 @@ def sql(config: str, layer: str, zoom: int, x: int, y: int):
     c = tilekiln.load_config(config)
 
     if layer is None:
-        for sql in c.layer_queries(Tile(zoom, x, y)):
-            click.echo(sql)
+        for sql in c.layer_queries(Tile(zoom, x, y)).values():
+            if sql is not None:
+                click.echo(sql)
         return 0
     else:
-        # Iterate through the layers to find the right one
         try:
-            lc = c.__layers[layer]
+            sql = c.layer_query(layer, Tile(zoom, x, y))
         except KeyError:
             click.echo(f"Layer '{layer}' not found in configuration", err=True)
             return 1
-
-        sql = lc.render_sql(Tile(zoom, x, y))
         if sql is None:
-            click.echo((f"Zoom {zoom} not between min zoom {lc.minzoom} "
-                        f"and max zoom {lc.maxzoom} for layer {layer}."), err=True)
+            click.echo((f"Zoom {zoom} not between min zoom and max zoom for layer {layer}."),
+                       err=True)
             return 1
         click.echo(sql)
         return 0

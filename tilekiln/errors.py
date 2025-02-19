@@ -3,8 +3,8 @@ Custom exceptions used by tilekiln
 
 Exception (base)
 |_ Error
-   |_ConfigError
-   |_RuntimeError
+   |_ ConfigError
+   |_ RuntimeError
 '''
 
 
@@ -34,4 +34,8 @@ class RuntimeError(Error):
 
 
 class ZoomNotDefined(RuntimeError):
+    pass
+
+
+class TilesetMissing(RuntimeError):
     pass

@@ -80,6 +80,6 @@ def serve_tile(prefix: str, zoom: int, x: int, y:  int):
     if prefix != config.id:
         raise HTTPException(status_code=404, detail=f"Tileset {prefix} not found on server.")
     global kiln
-    return Response(kiln.render(Tile(zoom, x, y)),
-                    media_type="application/vnd.mapbox-vector-tile",
+    tile = b''.join(kiln.render_all(Tile(zoom, x, y)).values())
+    return Response(tile, media_type="application/vnd.mapbox-vector-tile",
                     headers=STANDARD_HEADERS)
