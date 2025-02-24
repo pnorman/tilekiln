@@ -111,45 +111,25 @@ Serves tiles from tile storage. This is highly scalable and the preferred mode f
 
 It presents a tilejson at `/<id>/tilejson.json`. In the future it will allow serving multiple tilesets.
 
+#### `prometheus`
+Starts a prometheus exporter for metrics on tiles. By default it presents metrics at `http://127.0.0.1:10013/metrics`.
+
 ## Quick-start
 These instructions give you a setup based on osm2pgsql-themepark and their shortbread setup. They assume you have PostgreSQL with PostGIS and Python 3.10+ with venv set up, and a recent version of osm2pgsql.
 
 ### Install and setup
 
 ```sh
-git clone https://github.com/osm2pgsql-dev/osm2pgsql-themepark.git
 python3 -m venv tilekiln
 tilekiln/bin/pip install tilekiln
-createdb flex
-psql -d flex -c 'CREATE EXTENSION postgis;'
-createdb tiles
+tilekiln/bin/tilekiln --help
 ```
 
-### Loading data
-We have to produce a tilekiln config from the osm2pgsql-themepark config. This requires uncommenting a line in the config.
+### Configuration Setup
 
-```sh
-sed -i -E -e "s/--.*(themepark:plugin\('tilekiln'\):write_config\('tk'\))/\1/" ./osm2pgsql-themepark/config/shortbread_gen.lua
-LUA_PATH="./osm2pgsql-themepark/lua/?.lua;;" osm2pgsql -d flex -O flex -S ./osm2pgsql-themepark/config/shortbread_gen.lua osm-data.pbf
-LUA_PATH="./osm2pgsql-themepark/lua/?.lua;;" osm2pgsql-gen -d flex -S ./osm2pgsql-themepark/config/shortbread_gen.lua
-mkdir -p downloads
-osm2pgsql-themepark/themes/external/download-and-import.sh ./downloads flex oceans ocean
-```
+Tilekiln requires a configuration file that defines the contents of your vector tiles. Most configurations are designed to work with OpenStreetMap data loaded into PostgreSQL using osm2pgsql.
 
-### Serve some tiles
-
-```sh
-tilekiln/bin/tilekiln dev --config shortbread_config/config.yaml --source-dbname flex
-```
-
-Use the tilejson URL `http://127.0.0.1:8000/tilejson.json` to load tiles into your preferred tile viewer such as QGIS.
-
-### Set up storage
-
-```sh
-createdb tiles
-tilekiln/bin/tilekiln storage init --storage-dbname tiles --config shortbread_config/config.yaml
-```
+For a configuration, you can use the one provided by the [Street Spirit](https://github.com/pnorman/spirit) project. Follow its [installation guide](https://github.com/pnorman/spirit/blob/main/INSTALL.md) to get started.
 
 ## History
 The tilekiln configuration syntax is based on studies and experience with other vector tile and map generation configurations. In particular, it is heavily inspired by Tilezen's use of Jinja2 templates and TileJSON for necessary metadata.
