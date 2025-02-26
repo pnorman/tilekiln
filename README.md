@@ -80,6 +80,9 @@ Destroy storage for a tileset.
 Removes the storage for a tile layer and deletes its associated metadata.
 The metadata tables themselves are not removed.
 
+##### `storage inspect`
+Print data about a stored tile
+
 ##### `storage delete`
 Mass-delete tiles from a tileset
 

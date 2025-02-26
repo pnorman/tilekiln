@@ -240,6 +240,30 @@ class Storage:
                 return {layer: result[f"{layer}_data"]
                         for layer in tileset.layers}, result["generated"]
 
+    def get_tile_details(self, id: str, tile: Tile) -> dict[str, tuple[bytes, datetime.datetime]]:
+
+        details: dict[str, tuple[bytes, datetime.datetime]] = {}
+
+        tileset = self.get_tileset(id)
+        if tile.zoom > tileset.maxzoom or tile.zoom < tileset.minzoom:
+            raise tilekiln.errors.ZoomNotDefined
+        with self.__pool.connection() as conn:
+            with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+                query = (sql.SQL('SELECT ')
+                         + generated_columns(tileset.layers)
+                         + sql.SQL(',')
+                         + data_columns(tileset.layers)
+                         + sql.SQL('FROM {}.{}').format(sql.Identifier(self.__schema),
+                                                        sql.Identifier(id))
+                         + sql.SQL('WHERE zoom = %s AND x = %s AND y = %s'))
+                cur.execute(query, (tile.zoom, tile.x, tile.y), binary=True)
+                result = cur.fetchone()
+                if result is not None:
+                    for layer in tileset.layers:
+                        if result[f"{layer}_data"] is not None:
+                            details[layer] = (result[f"{layer}_data"], result[f"{layer}_generated"])
+                return details
+
     def save_tile(self, id: str, tile: Tile,
                   layers: dict[str, bytes], render_time=0) -> datetime.datetime | None:
         tileset = self.get_tileset(id)

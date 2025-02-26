@@ -140,7 +140,7 @@ class TestStorage(TestCase):
 
         calls.clear()
         while not rets.empty():
-            queue.get()
+            rets.get()
 
         rets.put({"id": "foo",
                   "layers": ["lyr1", "lyr2"],
@@ -193,7 +193,7 @@ class TestStorage(TestCase):
 
         calls.clear()
         while not rets.empty():
-            queue.get()
+            rets.get()
 
         # Test no tile found
         rets.put({"id": "foo",
@@ -207,7 +207,40 @@ class TestStorage(TestCase):
 
         calls.clear()
         while not rets.empty():
-            queue.get()
+            rets.get()
+
+        rets.put({"id": "foo",
+                  "layers": ["lyr1", "lyr2"],
+                  "minzoom": 0,
+                  "maxzoom": 2,
+                  "tilejson": json.loads("{}")
+                  })
+
+        rets.put({"lyr1_data": b"bar", "lyr2_data": b"baz",
+                  "lyr1_generated": "datetime1", "lyr2_generated": "datetime2"})
+        self.assertEqual(storage.get_tile_details("foo", Tile(0, 0, 0)),
+                         {"lyr1": (b"bar", "datetime1"), "lyr2": (b"baz", "datetime2")})
+
+        calls.clear()
+        while not rets.empty():
+            rets.get()
+
+        rets.put({"id": "foo",
+                  "layers": ["lyr1", "lyr2"],
+                  "minzoom": 0,
+                  "maxzoom": 2,
+                  "tilejson": json.loads("{}")
+                  })
+
+        rets.put({"lyr1_data": b"bar", "lyr2_data": None,
+                  "lyr1_generated": "datetime1", "lyr2_generated": None})
+
+        self.assertEqual(storage.get_tile_details("foo", Tile(0, 0, 0)),
+                         {"lyr1": (b"bar", "datetime1")})
+
+        calls.clear()
+        while not rets.empty():
+            rets.get()
 
         rets.put({"id": "foo",
                   "layers": ["lyr1", "lyr2"],
@@ -259,7 +292,7 @@ class TestStorage(TestCase):
 
         calls.clear()
         while not rets.empty():
-            queue.get()
+            rets.get()
 
         rets.put({"id": "foo",
                   "layers": ["lyr1", "lyr2"],
@@ -302,7 +335,7 @@ class TestStorage(TestCase):
 
         calls.clear()
         while not rets.empty():
-            queue.get()
+            rets.get()
 
         rets.put({"id": "foo",
                   "layers": ["lyr1", "lyr2"],
