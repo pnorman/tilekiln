@@ -38,8 +38,7 @@ class Definition:
             raise DefinitionError(f"Layer {id} is missing is missing file {filename}") from None
 
     def render_sql(self, tile: Tile) -> str:
-        '''Generate the SQL for a layer
-        '''
+        """Generate the SQL for a layer"""
 
         # Tile validity constraints. x/y are checked by Tile class
         assert tile.zoom >= self.minzoom
@@ -47,24 +46,30 @@ class Definition:
 
         # See https://postgis.net/docs/ST_AsMVT.html for SQL source
 
-        inner = self.__template.render(zoom=tile.zoom, x=tile.x, y=tile.y,
-                                       bbox=tile.bbox(self.buffer/self.extent),
-                                       unbuffered_bbox=tile.bbox(0),
-                                       extent=self.extent,
-                                       buffer=self.buffer,
-                                       tile_length=tile_length(tile),
-                                       tile_area=tile_length(tile)**2,
-                                       coordinate_length=tile_length(tile)/self.extent,
-                                       coordinate_area=(tile_length(tile)/self.extent)**2)
+        inner = self.__template.render(
+            zoom=tile.zoom,
+            x=tile.x,
+            y=tile.y,
+            bbox=tile.bbox(self.buffer / self.extent),
+            unbuffered_bbox=tile.bbox(0),
+            extent=self.extent,
+            buffer=self.buffer,
+            tile_length=tile_length(tile),
+            tile_area=tile_length(tile) ** 2,
+            coordinate_length=tile_length(tile) / self.extent,
+            coordinate_area=(tile_length(tile) / self.extent) ** 2,
+        )
 
         # TODO: Use proper escaping for self.id in SQL
-        return (f'''WITH mvtgeom AS -- {self.id}/{tile.zoom}/{tile.x}/{tile.y}\n(\n''' +
-                inner + f'''\n)\nSELECT ST_AsMVT(mvtgeom.*, '{self.id}', {self.extent})\n''' +
-                '''FROM mvtgeom;''')
+        return (
+            f"""WITH mvtgeom AS -- {self.id}/{tile.zoom}/{tile.x}/{tile.y}\n(\n"""
+            + inner
+            + f"""\n)\nSELECT ST_AsMVT(mvtgeom.*, '{self.id}', {self.extent})\n"""
+            + """FROM mvtgeom;"""
+        )
 
 
 def tile_length(tile) -> float:
-    '''Returns the length of a tile, in projected units
-    '''
+    """Returns the length of a tile, in projected units"""
     # -1 for half vs full world
-    return HALF_WORLD/(2**(tile.zoom-1))
+    return HALF_WORLD / (2 ** (tile.zoom - 1))

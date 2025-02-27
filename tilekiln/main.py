@@ -33,29 +33,51 @@ cli.add_command(tilekiln.scripts.serve.serve)
 
 
 @cli.command()
-@click.option('--bind-host', default='0.0.0.0', show_default=True,
-              help='Bind socket to this host. ')
-@click.option('--bind-port', default=PROMETHEUS_PORT, show_default=True,
-              type=click.INT, help='Bind socket to this port.')
-@click.option('--storage-dbname')
-@click.option('--storage-host')
-@click.option('--storage-port', type=click.INT)
-@click.option('--storage-username')
-def prometheus(bind_host: str, bind_port: int, storage_dbname: str, storage_host: str,
-               storage_port: int, storage_username: str) -> None:
-    '''Run a prometheus exporter for metrics on tiles.'''
+@click.option(
+    "--bind-host",
+    default="0.0.0.0",
+    show_default=True,
+    help="Bind socket to this host. ",
+)
+@click.option(
+    "--bind-port",
+    default=PROMETHEUS_PORT,
+    show_default=True,
+    type=click.INT,
+    help="Bind socket to this port.",
+)
+@click.option("--storage-dbname")
+@click.option("--storage-host")
+@click.option("--storage-port", type=click.INT)
+@click.option("--storage-username")
+def prometheus(
+    bind_host: str,
+    bind_port: int,
+    storage_dbname: str,
+    storage_host: str,
+    storage_port: int,
+    storage_username: str,
+) -> None:
+    """Run a prometheus exporter for metrics on tiles."""
     # The prometheus exporter sometimes needs multiple connections
-    with psycopg_pool.ConnectionPool(min_size=3, max_size=3, num_workers=1,
-                                     check=psycopg_pool.ConnectionPool.check_connection,
-                                     kwargs={"dbname": storage_dbname,
-                                             "host": storage_host,
-                                             "port": storage_port,
-                                             "user": storage_username}) as pool:
+    with psycopg_pool.ConnectionPool(
+        min_size=3,
+        max_size=3,
+        num_workers=1,
+        check=psycopg_pool.ConnectionPool.check_connection,
+        kwargs={
+            "dbname": storage_dbname,
+            "host": storage_host,
+            "port": storage_port,
+            "user": storage_username,
+        },
+    ) as pool:
         storage = Storage(pool)
 
         # tilekiln.prometheus brings in a bunch of stuff, so only do this
         # for this command
         from tilekiln.prometheus import serve_prometheus
+
         # TODO: make sleep a parameter
-        click.echo(f'Running prometheus exporter on http://{bind_host}:{bind_port}/')
+        click.echo(f"Running prometheus exporter on http://{bind_host}:{bind_port}/")
         serve_prometheus(storage, bind_host, bind_port, 15)

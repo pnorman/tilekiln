@@ -1,5 +1,6 @@
 import json
 import os
+from contextlib import asynccontextmanager
 
 import psycopg_pool
 from fastapi import FastAPI, Response, HTTPException
@@ -22,19 +23,15 @@ TILEKILN_CONFIG = "TILEKILN_CONFIG"
 TILEKILN_URL = "TILEKILN_URL"
 TILEKILN_THREADS = "TILEKILN_THREADS"
 
-STANDARD_HEADERS: dict[str, str] = {"Access-Control-Allow-Origin": "*",
-                                    "Access-Control-Allow-Methods": "GET, HEAD"}
+STANDARD_HEADERS: dict[str, str] = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, HEAD",
+}
 
 kiln: Kiln
 config: Config
 storage: Storage
 tilesets: dict[str, Tileset] = {}
-
-# Two types of server are defined - one for static tiles, the other for live generated tiles.
-server = FastAPI()
-live = FastAPI()
-
-# TODO: Set up middleware for CORS
 
 
 # TODO: Move elsewhere
@@ -44,27 +41,40 @@ def change_tilejson_url(tilejson: str, baseurl: str) -> str:
     return json.dumps(modified_tilejson)
 
 
-@server.on_event("startup")
-def load_server_config():
-    '''Load the config for the server with static pre-rendered tiles'''
+@asynccontextmanager
+async def server_lifespan(app: FastAPI):
+    """Load the config for the server with static pre-rendered tiles"""
     global storage
     global tilesets
     # Because the DB connection variables are passed as standard PG* vars,
     # a plain ConnectionPool() will connect to the right DB
-    conn = psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
-                                       check=psycopg_pool.ConnectionPool.check_connection)
+    conn = psycopg_pool.ConnectionPool(
+        min_size=1,
+        max_size=1,
+        num_workers=1,
+        check=psycopg_pool.ConnectionPool.check_connection,
+    )
     # TODO: Make readonly?
 
     storage = Storage(conn)
     for tileset in storage.get_tilesets():
         tilesets[tileset.id] = tileset
 
+    yield
 
-@live.on_event("startup")
-def load_live_config():
+    # Cleanup on shutdown (if needed)
+    if hasattr(conn, "close"):
+        # close() doesn't return anything useful
+        conn.close()
+
+
+@asynccontextmanager
+async def live_lifespan(app: FastAPI):
     global config
     global storage
     global tilesets
+    global kiln
+
     config = tilekiln.load_config(os.environ[TILEKILN_CONFIG])
 
     generate_args = {}
@@ -87,19 +97,43 @@ def load_live_config():
     if "STORAGE_PGUSER" in os.environ:
         storage_args["username"] = os.environ["STORAGE_PGUSER"]
 
-    storage_pool = psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
-                                               check=psycopg_pool.ConnectionPool.check_connection,
-                                               kwargs=storage_args)
+    storage_pool = psycopg_pool.ConnectionPool(
+        min_size=1,
+        max_size=1,
+        num_workers=1,
+        check=psycopg_pool.ConnectionPool.check_connection,
+        kwargs=storage_args,
+    )
 
     storage = Storage(storage_pool)
 
     # Storing the tileset in the dict allows some commonalities in code later
     tilesets[config.id] = Tileset.from_config(storage, config)
-    generate_pool = psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
-                                                check=psycopg_pool.ConnectionPool.check_connection,
-                                                kwargs=generate_args)
-    global kiln
+    generate_pool = psycopg_pool.ConnectionPool(
+        min_size=1,
+        max_size=1,
+        num_workers=1,
+        check=psycopg_pool.ConnectionPool.check_connection,
+        kwargs=generate_args,
+    )
     kiln = Kiln(config, generate_pool)
+
+    yield
+
+    # Cleanup on shutdown (if needed)
+    if hasattr(storage_pool, "close"):
+        # close() doesn't return anything useful
+        storage_pool.close()
+    if hasattr(generate_pool, "close"):
+        # close() doesn't return anything useful
+        generate_pool.close()
+
+
+# Two types of server are defined - one for static tiles, the other for live generated tiles.
+server = FastAPI(lifespan=server_lifespan)
+live = FastAPI(lifespan=live_lifespan)
+
+# TODO: Set up middleware for CORS
 
 
 @server.head("/")
@@ -125,11 +159,14 @@ def favicon():
 def tilejson(prefix: str):
     global tilesets
     if prefix not in tilesets:
-        raise HTTPException(status_code=404, detail=f'''Tileset {prefix} not found on server.''')
-    return Response(content=change_tilejson_url(tilesets[prefix].tilejson,
-                                                os.environ[TILEKILN_URL] + f"/{prefix}"),
-                    media_type="application/json",
-                    headers=STANDARD_HEADERS)
+        raise HTTPException(status_code=404, detail=f"""Tileset {prefix} not found on server.""")
+    return Response(
+        content=change_tilejson_url(
+            tilesets[prefix].tilejson, os.environ[TILEKILN_URL] + f"/{prefix}"
+        ),
+        media_type="application/json",
+        headers=STANDARD_HEADERS,
+    )
 
 
 @server.head("/{prefix}/{zoom}/{x}/{y}.mvt")
@@ -142,26 +179,35 @@ def serve_tile(prefix: str, zoom: int, x: int, y: int):
     try:
         tile, generated = tilesets[prefix].get_tile(Tile(zoom, x, y))
     except tilekiln.errors.ZoomNotDefined:
-        raise HTTPException(status_code=410,
-                            detail=f'''Tileset {zoom} not available for tileset {prefix}.''')
+        raise HTTPException(
+            status_code=410,
+            detail=f"""Tileset {zoom} not available for tileset {prefix}.""",
+        )
 
     if tile is None:
-        raise HTTPException(status_code=404,
-                            detail=f"Tile {prefix}/{zoom}/{x}/{y} not found in storage.")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Tile {prefix}/{zoom}/{x}/{y} not found in storage.",
+        )
 
     # We use the generated timestamp on the assumption that a specific
     # x/y/z will not be generated twice in the same ms.
     headers: dict[str, str] = {}
     if generated is not None:
-        headers = {"Last-Modified": generated.strftime(HTTP_TIME),
-                   "E-tag": generated.strftime("%s.%f")}
-    return Response(b''.join(tile.values()), media_type=MVT_MIME_TYPE,
-                    headers=STANDARD_HEADERS | headers)
+        headers = {
+            "Last-Modified": generated.strftime(HTTP_TIME),
+            "E-tag": generated.strftime("%s.%f"),
+        }
+    return Response(
+        b"".join(tile.values()),
+        media_type=MVT_MIME_TYPE,
+        headers=STANDARD_HEADERS | headers,
+    )
 
 
 @live.head("/{prefix}/{zoom}/{x}/{y}.mvt")
 @live.get("/{prefix}/{zoom}/{x}/{y}.mvt")
-def live_serve_tile(prefix: str, zoom: int, x: int, y:  int):
+def live_serve_tile(prefix: str, zoom: int, x: int, y: int):
     global tilesets
     if prefix not in tilesets:
         raise HTTPException(status_code=404, detail=f"Tileset {prefix} not found on server.")
@@ -170,17 +216,24 @@ def live_serve_tile(prefix: str, zoom: int, x: int, y:  int):
     try:
         existing, generated = tilesets[prefix].get_tile(Tile(zoom, x, y))
     except tilekiln.errors.ZoomNotDefined:
-        raise HTTPException(status_code=410,
-                            detail=f'''Tileset {zoom} not available for tileset {prefix}.''')
+        raise HTTPException(
+            status_code=410,
+            detail=f"""Tileset {zoom} not available for tileset {prefix}.""",
+        )
 
     # Handle storage hits
     if existing is not None:
         headers: dict[str, str] = {}
         if generated is not None:
-            headers = {"Last-Modified": generated.strftime(HTTP_TIME),
-                       "E-tag": generated.strftime("%s.%f")}
-        return Response(b''.join(existing.values()), media_type=MVT_MIME_TYPE,
-                        headers=STANDARD_HEADERS | headers)
+            headers = {
+                "Last-Modified": generated.strftime(HTTP_TIME),
+                "E-tag": generated.strftime("%s.%f"),
+            }
+        return Response(
+            b"".join(existing.values()),
+            media_type=MVT_MIME_TYPE,
+            headers=STANDARD_HEADERS | headers,
+        )
 
     # Storage miss, so generate a new tile
     global kiln
@@ -189,8 +242,12 @@ def live_serve_tile(prefix: str, zoom: int, x: int, y:  int):
     # TODO: Make async so tile is saved and response returned in parallel
     generated = tilesets[prefix].save_tile(tile, layers)
     if generated is not None:
-        headers = {"Last-Modified": generated.strftime(HTTP_TIME),
-                   "E-tag": generated.strftime("%s.%f")}
-    return Response(b''.join(layers.values()),
-                    media_type=MVT_MIME_TYPE,
-                    headers=STANDARD_HEADERS | headers)
+        headers = {
+            "Last-Modified": generated.strftime(HTTP_TIME),
+            "E-tag": generated.strftime("%s.%f"),
+        }
+    return Response(
+        b"".join(layers.values()),
+        media_type=MVT_MIME_TYPE,
+        headers=STANDARD_HEADERS | headers,
+    )

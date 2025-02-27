@@ -50,6 +50,18 @@ dependencies = [
 [project.optional-dependencies]
 test = [
     "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+testpaths = ["tests"]
+python_files = "test_*.py"
+asyncio_default_fixture_loop_scope = "function"
+# Skip integration tests by default, run with: pytest -m integration
+markers = [
+    "integration: marks tests that require a Postgres database (deselect with '-m \"not integration\"')",
 ]
 
 [project.scripts]
@@ -64,3 +76,6 @@ Source = "https://github.com/pnorman/tilekiln/"
 include = [
     "/tilekiln",
 ]
+
+[tool.ruff]
+line-length = 100

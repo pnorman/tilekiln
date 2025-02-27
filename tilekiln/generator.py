@@ -1,6 +1,7 @@
-'''
+"""
 The code here pulls creates multiple kilns to generate the tiles in parallel
-'''
+"""
+
 import multiprocessing as mp
 from collections.abc import Collection
 
@@ -18,18 +19,26 @@ tileset: Tileset
 
 
 def setup(config: Config, source_kwargs, storage_kwargs) -> None:  # type: ignore[no-untyped-def]
-    '''
+    """
     Sets up the kiln and tileset for the worker function.
-    '''
+    """
     global kiln, tileset
-    source_pool = psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
-                                              check=psycopg_pool.ConnectionPool.check_connection,
-                                              kwargs=source_kwargs)
+    source_pool = psycopg_pool.ConnectionPool(
+        min_size=1,
+        max_size=1,
+        num_workers=1,
+        check=psycopg_pool.ConnectionPool.check_connection,
+        kwargs=source_kwargs,
+    )
     kiln = Kiln(config, source_pool)
 
-    storage_pool = psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
-                                               check=psycopg_pool.ConnectionPool.check_connection,
-                                               kwargs=storage_kwargs)
+    storage_pool = psycopg_pool.ConnectionPool(
+        min_size=1,
+        max_size=1,
+        num_workers=1,
+        check=psycopg_pool.ConnectionPool.check_connection,
+        kwargs=storage_kwargs,
+    )
     storage = Storage(storage_pool)
     tileset = Tileset.from_config(storage, config)
 
@@ -44,9 +53,13 @@ def worker(tile: Tile) -> None:
         raise RuntimeError(f"Error generating {tile}") from e
 
 
-def generate(config: Config, source_kwargs, storage_kwargs,  # type: ignore[no-untyped-def]
-             tiles: Collection[Tile], num_processes: int) -> None:
-
+def generate(
+    config: Config,
+    source_kwargs,
+    storage_kwargs,  # type: ignore[no-untyped-def]
+    tiles: Collection[Tile],
+    num_processes: int,
+) -> None:
     # If there are no processes and no tiles then there's nothing to do.
     if num_processes == 0 and len(tiles) == 0:
         return

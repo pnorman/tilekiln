@@ -27,6 +27,30 @@ Utility commands allow checking of configurations, storage management, and debug
 ## Usage
 Tilekiln commands can be broken into two sets, commands which involve serving tiles, and CLI commands. Command-line options can be found with `tilekiln --help`, which includes a listing and description of all options.
 
+## Development
+
+### Running Tests
+
+The project includes both unit tests and integration tests. To run the standard unit tests:
+
+```sh
+pytest
+```
+
+Integration tests require a PostgreSQL database with PostGIS installed. These tests are marked with `@pytest.mark.integration` and are not run by default. To run them:
+
+```sh
+pytest -m integration
+```
+
+To run all tests:
+
+```sh
+pytest -m "integration or not integration"
+```
+
+The integration tests will automatically create and destroy temporary test databases. They will be skipped if the PostgreSQL environment variables (`PGHOST`, `PGUSER`, etc.) are not set.
+
 ### CLI commands
 CLI commands will perform a task then exit, returning to ther shell.
 

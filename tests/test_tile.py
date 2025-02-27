@@ -12,8 +12,10 @@ class TestTile(TestCase):
 
     def test_bounds(self):
         t = Tile(3, 2, 1)
-        self.assertEqual(t.bbox(0), 'ST_TileEnvelope(3, 2, 1, margin=>0)')
-        self.assertEqual(t.bbox(8/4096), 'ST_TileEnvelope(3, 2, 1, margin=>0.001953125)')
+        self.assertEqual(t.bbox(0), "ST_TileEnvelope(3, 2, 1, margin=>0)")
+        self.assertEqual(
+            t.bbox(8 / 4096), "ST_TileEnvelope(3, 2, 1, margin=>0.001953125)"
+        )
 
     def test_eq(self):
         t1 = Tile(3, 2, 1)
