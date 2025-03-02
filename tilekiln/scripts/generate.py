@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 import tilekiln
 
-from tilekiln.tile import Tile
+from tilekiln.tile import Tile, layer_frominput
 from tilekiln.tilerange import Tilerange
 import tilekiln.generator
 
@@ -102,3 +102,49 @@ def zooms(config: int, num_threads: int,
         tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tqdm(tiles), threads)
     else:
         tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tiles, threads)
+
+
+@generate.command()
+@click.option('--config', required=True, type=click.Path(exists=True, dir_okay=False))
+@click.option('-n', '--num-threads', default=len(os.sched_getaffinity(0)),
+              show_default=True, help='Number of worker processes.')
+@click.option('--source-dbname')
+@click.option('--source-host')
+@click.option('--source-port')
+@click.option('--source-username')
+@click.option('--storage-dbname')
+@click.option('--storage-host')
+@click.option('--storage-port')
+@click.option('--storage-username')
+@click.option('--progress/--no-progress', help='Display progress bar')
+def layers(config: int, num_threads: int,
+           source_dbname: str, source_host: str, source_port: int, source_username: str,
+           storage_dbname: str, storage_host: str, storage_port: int, storage_username: str,
+           progress: bool) -> None:
+    '''Generate specific tile layers.
+
+    A list of z/x/y,layer layers is read from stdin and those are generated and saved
+    to storage.
+    '''
+
+    c = tilekiln.load_config(config)
+
+    layers = layer_frominput(sys.stdin.read())
+    threads = min(num_threads, len(layers))  # No point in more threads than tiles
+
+    click.echo(f"Rendering {len(layers)} tiles over {threads} threads")
+
+    source_kwargs = {"dbname": source_dbname,
+                     "host": source_host,
+                     "port": source_port,
+                     "user": source_username}
+    storage_kwargs = {"dbname": storage_dbname,
+                      "host": storage_host,
+                      "port": storage_port,
+                      "user": storage_username}
+    if progress:
+        tilekiln.generator.generate_layers(c, source_kwargs, storage_kwargs,
+                                           tqdm(layers.items()), threads)
+    else:
+        tilekiln.generator.generate_layers(c, source_kwargs, storage_kwargs,
+                                           layers.items(), threads)

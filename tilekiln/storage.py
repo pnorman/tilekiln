@@ -85,9 +85,21 @@ class Storage:
                                   record["minzoom"], record["maxzoom"],
                                   json.dumps(record["tilejson"]))
 
+    def get_tileset_ids(self) -> Iterator[str]:
+        '''
+        Get only the tileset IDs
+        '''
+
+        with self.__pool.connection() as conn:
+            with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+                cur.execute(f'''SELECT id
+                                FROM "{self.__schema}"."{METADATA_TABLE}"''')
+                for record in cur:
+                    yield record["id"]
+
     def get_tileset(self, id: str) -> Tileset:
         '''
-        Gets all tilesets in the storage
+        Fetch a specific tileset
         '''
 
         with self.__pool.connection() as conn:
@@ -103,17 +115,18 @@ class Storage:
                                result["minzoom"], result["maxzoom"],
                                json.dumps(result["tilejson"]))
 
-    def get_tileset_ids(self) -> Iterator[str]:
+    def get_layer_ids(self, id: str) -> list[str]:
+        '''Get layers of a specific tileset
         '''
-        Get only the tileset IDs
-        '''
-
         with self.__pool.connection() as conn:
             with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
-                cur.execute(f'''SELECT id
-                                FROM "{self.__schema}"."{METADATA_TABLE}"''')
-                for record in cur:
-                    yield record["id"]
+                cur.execute(sql.SQL('''SELECT layers FROM {}.{}''')
+                            .format(sql.Identifier(self.__schema), sql.Identifier(METADATA_TABLE)) +
+                            sql.SQL('''WHERE id = %s'''), (id, ))
+                result = cur.fetchone()
+                if result is None:
+                    raise tilekiln.errors.TilesetMissing
+                return result["layers"]
 
     ''' Methods for metrics'''
     def metrics(self) -> Collection[Metric]:
@@ -143,10 +156,6 @@ class Storage:
             with conn.cursor() as cur:
                 self.__set_metadata(cur, id, layers, minzoom, maxzoom, tilejson)
             conn.commit()
-
-    def get_layer_ids(self, id: str) -> list[str]:
-        ''''''
-        raise NotImplementedError()
 
     # TODO: Should the various get_* functions be separate? The query has to fetch from the
     # DB each time, but only tilejson needs URL. Not an urgent issue.
@@ -210,6 +219,17 @@ class Storage:
                     self.__delete_tile(cur, id, tile)
             conn.commit()
 
+    def delete_tilelayers(self, id: str, tilelayers: dict[Tile, set[str]]):
+        allowed_layers = self.get_layer_ids(id)
+        with self.__pool.connection() as conn:
+            with conn.cursor() as cur:
+                for tile, layers in tilelayers.items():
+                    if layers.difference(allowed_layers) != set():
+                        raise tilekiln.errors.LayerNotDefined(
+                            f"Layers{layers.difference(allowed_layers)} not defined for {id}")
+                    self.__delete_tilelayer(cur, id, tile, layers)
+            conn.commit()
+
     def truncate_tables(self, id: str, zooms: Optional[Sequence[int]] = None):
         if zooms is None:
             zooms = range(self.get_minzoom(id), self.get_maxzoom(id)+1)
@@ -219,7 +239,7 @@ class Storage:
                     self.__truncate_table(cur, id, zoom)
             conn.commit()
 
-    def get_tile(self, id: str, tile: Tile) -> tuple[dict[str, bytes] | None,
+    def get_tile(self, id: str, tile: Tile) -> tuple[dict[str, bytes | None],
                                                      datetime.datetime | None]:
         tileset = self.get_tileset(id)
         if tile.zoom > tileset.maxzoom or tile.zoom < tileset.minzoom:
@@ -227,26 +247,52 @@ class Storage:
         with self.__pool.connection() as conn:
             with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
                 query = (sql.SQL('SELECT GREATEST(')
-                         + generated_columns(tileset.layers)
+                         + _generated_columns(tileset.layers)
                          + sql.SQL(') AS generated,')
-                         + data_columns(tileset.layers)
+                         + _data_columns(tileset.layers)
                          + sql.SQL('FROM {}.{}').format(sql.Identifier(self.__schema),
                                                         sql.Identifier(id))
                          + sql.SQL('WHERE zoom = %s AND x = %s AND y = %s'))
                 cur.execute(query, (tile.zoom, tile.x, tile.y), binary=True)
                 result = cur.fetchone()
                 if result is None:
-                    return None, None
+                    return {layer: None for layer in tileset.layers}, None
                 return {layer: result[f"{layer}_data"]
                         for layer in tileset.layers}, result["generated"]
+
+    def get_tile_details(self, id: str, tile: Tile) -> dict[str,
+                                                            tuple[bytes, datetime.datetime] | None]:
+
+        details: dict[str, tuple[bytes, datetime.datetime] | None] = {}
+
+        tileset = self.get_tileset(id)
+        if tile.zoom > tileset.maxzoom or tile.zoom < tileset.minzoom:
+            raise tilekiln.errors.ZoomNotDefined
+        with self.__pool.connection() as conn:
+            with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+                query = (sql.SQL('SELECT ')
+                         + _generated_columns(tileset.layers)
+                         + sql.SQL(',')
+                         + _data_columns(tileset.layers)
+                         + sql.SQL('FROM {}.{}').format(sql.Identifier(self.__schema),
+                                                        sql.Identifier(id))
+                         + sql.SQL('WHERE zoom = %s AND x = %s AND y = %s'))
+                cur.execute(query, (tile.zoom, tile.x, tile.y), binary=True)
+                result = cur.fetchone()
+                for layer in tileset.layers:
+                    if result is not None and result[f"{layer}_data"] is not None:
+                        details[layer] = (result[f"{layer}_data"], result[f"{layer}_generated"])
+                    else:
+                        details[layer] = None
+                return details
 
     def save_tile(self, id: str, tile: Tile,
                   layers: dict[str, bytes], render_time=0) -> datetime.datetime | None:
         tileset = self.get_tileset(id)
         if tile.zoom > tileset.maxzoom or tile.zoom < tileset.minzoom:
             raise tilekiln.errors.ZoomNotDefined
-        if tileset.layers != list(layers.keys()):
-            raise tilekiln.errors.Error("Layers rendered do not match layers specified")
+        if set(layers.keys()) - set(tileset.layers):
+            raise tilekiln.errors.Error("Rendered tile contains layers not known to storage")
         tablename = f"{id}_z{tile.zoom}"
 
         with self.__pool.connection() as conn:
@@ -256,13 +302,18 @@ class Storage:
                 # return zero rows if the contents are the same. The method here instead results
                 # in extra writes but does preserve the datetime.
 
-                # These statements operate on the
+                # The layers used are the incoming tile layers to allow for partial writes
 
+                # Only the layers present in the new tile are
                 data_upsert = [sql.SQL("{} = EXCLUDED.{}").format(sql.Identifier(f"{layer}_data"),
                                                                   sql.Identifier(f"{layer}_data"))
-                               for layer in tileset.layers]
-                time_upsert = [sql.SQL("{generated} = CASE WHEN store.{data} != EXCLUDED.{data} "
-                                       "THEN statement_timestamp() ELSE store.{generated} END")
+                               for layer in layers]
+                time_upsert = [sql.SQL("{generated} = CASE WHEN store.{data} IS "
+                                       "DISTINCT FROM EXCLUDED.{data} THEN statement_timestamp() "
+                                       # It's possible the timestamp is invalidly null,
+                                       # so coalesce it with current timestamp
+                                       "ELSE COALESCE(store.{generated}, statement_timestamp()) "
+                                       "END")
                                .format(generated=sql.Identifier(f"{layer}_generated"),
                                        data=sql.Identifier(f"{layer}_data"))
                                for layer in layers]
@@ -272,15 +323,20 @@ class Storage:
 
                 q = (sql.SQL("INSERT INTO {}.{} AS store\n").format(sql.Identifier(self.__schema),
                                                                     sql.Identifier(tablename))
-                     + sql.SQL("(zoom, x, y, ") + data_columns(layers) + sql.SQL(")\n")
+                     + sql.SQL("(zoom, x, y, ") + _data_columns(layers) + sql.SQL(", ")
+                     + _generated_columns(layers) + sql.SQL(")\n")
                      + sql.SQL("VALUES ({}, {}, {}, ").format(sql.Literal(tile.zoom),
                                                               sql.Literal(tile.x),
                                                               sql.Literal(tile.y))
-                     + sql.SQL(", ").join(data_idents) + sql.SQL(")\n")
+                     + sql.SQL(", ").join(data_idents) + sql.SQL(",\n")
+                     + sql.SQL(", ").join([sql.SQL("statement_timestamp()") for _ in layers])
+                     + sql.SQL(")\n")
                      + sql.SQL("ON CONFLICT (zoom, x, y)\n")
                      + sql.SQL("DO UPDATE SET ")
                      + sql.SQL(", ").join([*data_upsert, *time_upsert])
-                     + sql.SQL("\nRETURNING GREATEST(") + generated_columns(layers)
+                     # This has to operate on tileset.layers because we want the greatest date
+                     # of *any* layer, not just the layers in the incoming tile
+                     + sql.SQL("\nRETURNING GREATEST(") + _generated_columns(tileset.layers)
                      + sql.SQL(") AS generated"))
 
                 cur.execute(q, layers)
@@ -410,7 +466,7 @@ class Storage:
                    sql.SQL('x int CHECK (x >= 0 AND x < 1 << zoom)'),
                    sql.SQL('y int CHECK (y >= 0 AND y < 1 << zoom)')]
 
-        columns += [sql.SQL("{} timestamptz DEFAULT statement_timestamp()")
+        columns += [sql.SQL("{} timestamptz")
                     .format(sql.Identifier(f'{layer}_generated'))
                     for layer in layers]
         columns += [sql.SQL("{} bytea").format(sql.Identifier(f'{layer}_data'))
@@ -451,12 +507,25 @@ class Storage:
                         WHERE zoom = %s AND x = %s AND y = %s''',
                     (tile.zoom, tile.x, tile.y))
 
+    def __delete_tilelayer(self, cur, id: str, tile: Tile, layers: set[str]):
+        '''Delete specific layers from a tile
+        '''
+        tablename = f"{id}_z{tile.zoom}"
+        data = sql.SQL(', ').join([sql.SQL("{} = NULL").format(sql.Identifier(f"{layer}_data"))
+                                   for layer in layers])
+        time = sql.SQL(', ').join([sql.SQL("{} = NULL").format(sql.Identifier(f"{layer}_generated"))
+                                   for layer in layers])
+        cur.execute(sql.SQL('''UPDATE {}.{}\n''').format(sql.Identifier(self.__schema),
+                                                         sql.Identifier(tablename))
+                    + sql.SQL('''SET ''') + data + sql.SQL(', ') + time
+                    + sql.SQL('''\nWHERE x = %s AND y = %s'''), (tile.x, tile.y))
 
-def data_columns(layers) -> sql.Composable:
+
+def _data_columns(layers) -> sql.Composable:
     return sql.SQL(', ').join([sql.Identifier(f"{layer}_data")
                                for layer in layers])
 
 
-def generated_columns(layers) -> sql.Composable:
+def _generated_columns(layers) -> sql.Composable:
     return sql.SQL(', ').join([sql.Identifier(f"{layer}_generated")
                                for layer in layers])

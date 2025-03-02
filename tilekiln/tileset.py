@@ -56,7 +56,7 @@ class Tileset:
         self.storage.set_metadata(self.id, self.layers, self.minzoom, self.maxzoom,
                                   self.tilejson)
 
-    def get_tile(self, tile: Tile) -> tuple[dict[str, bytes] | None, datetime.datetime | None]:
+    def get_tile(self, tile: Tile) -> tuple[dict[str, bytes | None], datetime.datetime | None]:
         if tile.zoom < self.minzoom or tile.zoom > self.maxzoom:
             raise tilekiln.errors.ZoomNotDefined
         return self.storage.get_tile(self.id, tile)

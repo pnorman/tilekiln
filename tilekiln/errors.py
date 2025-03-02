@@ -37,5 +37,9 @@ class ZoomNotDefined(RuntimeError):
     pass
 
 
+class LayerNotDefined(RuntimeError):
+    pass
+
+
 class TilesetMissing(RuntimeError):
     pass

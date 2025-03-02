@@ -36,8 +36,13 @@ class Tile:
 
     @classmethod
     def from_string(cls, tile: str):
-        fragments = tile.split("/")
-        return cls(int(fragments[0]), int(fragments[1]), int(fragments[2]))
+        try:
+            fragments = tile.split("/")
+            if len(fragments) != 3:
+                raise ValueError(f"Unable to parse tile from: {tile}")
+            return cls(int(fragments[0]), int(fragments[1]), int(fragments[2]))
+        except (ValueError, IndexError):
+            raise ValueError(f"Unable to parse tile from: {tile}")
 
     @classmethod
     def from_tileid(cls, tileid: int):
@@ -49,3 +54,24 @@ class Tile:
         '''Returns the bounding box for a tile
         '''
         return f'''ST_TileEnvelope({self.zoom}, {self.x}, {self.y}, margin=>{buffer})'''
+
+
+def layer_frominput(input: str) -> dict[Tile, set[str]]:
+    '''Generates a list of tile layers from string
+    '''
+
+    layers: dict[Tile, set[str]] = {}
+    for line in input.split("\n"):
+        if line.strip() == "":
+            continue
+        try:
+            tiletext, layer = line.split(",")
+        except ValueError:
+            raise ValueError(f"Unable to parse layer from: {line}")
+        tile = Tile.from_string(tiletext)
+        if tile in layers:
+            layers[tile].add(layer)
+        else:
+            layers[tile] = {layer}
+
+    return layers

@@ -38,7 +38,20 @@ def worker(tile: Tile) -> None:
     global kiln, tileset
     try:
         mvt = kiln.render_all(tile)
+        # Because everything was rendered we don't need to check for missing layers
         tileset.save_tile(tile, mvt)
+    except Exception as e:
+        print(f"Error generating {tile}")
+        raise RuntimeError(f"Error generating {tile}") from e
+
+
+def layer_worker(work: tuple[Tile, set[str]]) -> None:
+    global kiln, tileset
+    tile, layers = work
+    try:
+        new_mvts = {layer: kiln.render_layer(layer, tile) for layer in layers}
+        # Because everything was rendered we don't need to check for missing layers
+        tileset.save_tile(tile, new_mvts)
     except Exception as e:
         print(f"Error generating {tile}")
         raise RuntimeError(f"Error generating {tile}") from e
@@ -53,6 +66,23 @@ def generate(config: Config, source_kwargs, storage_kwargs,  # type: ignore[no-u
 
     with mp.Pool(num_processes, setup, (config, source_kwargs, storage_kwargs)) as pool:
         imap_it = pool.imap_unordered(worker, tiles, 100)
+        pool.close()
+        pool.join()
+
+        # Check for exceptions
+        for x in imap_it:
+            pass
+
+
+def generate_layers(config: Config, source_kwargs, storage_kwargs,  # type: ignore[no-untyped-def]
+                    layers: Collection[tuple[Tile, set[str]]], num_processes: int) -> None:
+
+    # If there are no processes and no tiles then there's nothing to do.
+    if num_processes == 0 and len(layers) == 0:
+        return
+
+    with mp.Pool(num_processes, setup, (config, source_kwargs, storage_kwargs)) as pool:
+        imap_it = pool.imap_unordered(layer_worker, layers, 100)
         pool.close()
         pool.join()
 
