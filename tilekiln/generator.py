@@ -38,6 +38,7 @@ def worker(tile: Tile) -> None:
     global kiln, tileset
     try:
         mvt = kiln.render_all(tile)
+        # Because everything was rendered we don't need to check for missing layers
         tileset.save_tile(tile, mvt)
     except Exception as e:
         print(f"Error generating {tile}")

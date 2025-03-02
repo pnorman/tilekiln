@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from tilekiln.tile import Tile
+from tilekiln.tile import Tile, layer_frominput
 
 
 class TestTile(TestCase):
@@ -32,3 +32,22 @@ class TestTile(TestCase):
         self.assertEqual(Tile(2, 0, 0), Tile.from_tileid(5))
         self.assertEqual(Tile(2, 1, 0).tileid, 6)
         self.assertEqual(Tile(2, 1, 0), Tile.from_tileid(6))
+
+    def test_fromstring(self):
+        self.assertEqual(Tile.from_string("0/0/0"), Tile(0, 0, 0))
+        self.assertEqual(Tile.from_string("1/0/0"), Tile(1, 0, 0))
+        self.assertEqual(Tile.from_string("1/1/0"), Tile(1, 1, 0))
+        self.assertEqual(Tile.from_string("1/0/1"), Tile(1, 0, 1))
+
+        self.assertRaises(ValueError, Tile.from_string, "0/0")
+        self.assertRaises(ValueError, Tile.from_string, "0/0/0/0")
+        self.assertRaises(ValueError, Tile.from_string, "a/b/c")
+
+    def test_tilelayer(self):
+        self.assertEqual(layer_frominput("0/0/0,lyr1"),
+                         {Tile(0, 0, 0): {"lyr1"}})
+        self.assertEqual(layer_frominput("0/0/0,lyr1\n"),
+                         {Tile(0, 0, 0): {"lyr1"}})
+
+        self.assertEqual(layer_frominput("0/0/0,lyr1\n1/0/0,lyr2\n0/0/0,lyr2"),
+                         {Tile(0, 0, 0): {"lyr1", "lyr2"}, Tile(1, 0, 0): {"lyr2"}})

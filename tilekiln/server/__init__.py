@@ -145,9 +145,12 @@ def serve_tile(prefix: str, zoom: int, x: int, y: int):
         raise HTTPException(status_code=410,
                             detail=f'''Tileset {zoom} not available for tileset {prefix}.''')
 
-    if tile is None:
-        raise HTTPException(status_code=404,
-                            detail=f"Tile {prefix}/{zoom}/{x}/{y} not found in storage.")
+    response = b''
+    for data in tile.values():
+        if data is None:
+            raise HTTPException(status_code=404,
+                                detail=f"Tile {prefix}/{zoom}/{x}/{y} not found in storage.")
+        response += data
 
     # We use the generated timestamp on the assumption that a specific
     # x/y/z will not be generated twice in the same ms.
@@ -155,7 +158,7 @@ def serve_tile(prefix: str, zoom: int, x: int, y: int):
     if generated is not None:
         headers = {"Last-Modified": generated.strftime(HTTP_TIME),
                    "E-tag": generated.strftime("%s.%f")}
-    return Response(b''.join(tile.values()), media_type=MVT_MIME_TYPE,
+    return Response(response, media_type=MVT_MIME_TYPE,
                     headers=STANDARD_HEADERS | headers)
 
 
@@ -173,24 +176,39 @@ def live_serve_tile(prefix: str, zoom: int, x: int, y:  int):
         raise HTTPException(status_code=410,
                             detail=f'''Tileset {zoom} not available for tileset {prefix}.''')
 
+    response = b''
+    missing = []
+    for layer, data in existing.items():
+        if data is None:
+            missing.append(layer)
+        else:
+            response += data
+
     # Handle storage hits
-    if existing is not None:
+    if missing == []:
         headers: dict[str, str] = {}
         if generated is not None:
             headers = {"Last-Modified": generated.strftime(HTTP_TIME),
                        "E-tag": generated.strftime("%s.%f")}
-        return Response(b''.join(existing.values()), media_type=MVT_MIME_TYPE,
+        return Response(response, media_type=MVT_MIME_TYPE,
                         headers=STANDARD_HEADERS | headers)
 
     # Storage miss, so generate a new tile
+    # TODO: partially generate a new tile
     global kiln
     tile = Tile(zoom, x, y)
-    layers = kiln.render_all(tile)
+    new_layers = {layer: kiln.render_layer(layer, tile) for layer in missing}
     # TODO: Make async so tile is saved and response returned in parallel
-    generated = tilesets[prefix].save_tile(tile, layers)
+    generated = tilesets[prefix].save_tile(tile, new_layers)
+
+    mvt = b''.join(new_layers.values()) + b''.join([data for data in existing.values()
+                                                    if data is not None])
     if generated is not None:
         headers = {"Last-Modified": generated.strftime(HTTP_TIME),
                    "E-tag": generated.strftime("%s.%f")}
-    return Response(b''.join(layers.values()),
+    else:
+        headers = {}
+
+    return Response(mvt,
                     media_type=MVT_MIME_TYPE,
                     headers=STANDARD_HEADERS | headers)
