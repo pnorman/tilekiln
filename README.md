@@ -60,8 +60,10 @@ A list of z/x/y tiles is read from stdin and those tiles are generated and
 saved to storage. The entire list is read before deletion starts.
 
 ##### `generate zoom`
-*Not yet implemented.*
 Generate all tiles by zoom.
+
+##### `generate layers`
+Generate specific layers for specific tiles.
 
 #### `storage`
 Commands working with tile storage.
