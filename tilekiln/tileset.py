@@ -43,7 +43,7 @@ class Tileset:
 
         layers = [layer for layer in storage.get_layer_ids(id)]
         minzoom = storage.get_minzoom(id)
-        maxzoom = storage.get_minzoom(id)
+        maxzoom = storage.get_maxzoom(id)
         tilejson = storage.get_tilejson(id, 'REPLACED_BY_SERVER')
         return cls(storage, id, layers, minzoom, maxzoom, tilejson)
 
@@ -62,4 +62,6 @@ class Tileset:
         return self.storage.get_tile(self.id, tile)
 
     def save_tile(self, tile: Tile, layers: dict[str, bytes]) -> datetime.datetime | None:
+        if tile.zoom < self.minzoom or tile.zoom > self.maxzoom:
+            raise tilekiln.errors.ZoomNotDefined
         return self.storage.save_tile(self.id, tile, layers)
