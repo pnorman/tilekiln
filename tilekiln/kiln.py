@@ -15,14 +15,19 @@ class Kiln:
         self.__config = config
         self.__pool = pool
 
-    def render_all(self, tile: Tile) -> dict[str, bytes]:
+    def render_all(self, tile: Tile, layer_filters: set[str] | None = None) -> dict[str, bytes]:
         if tile.zoom < self.__config.minzoom or tile.zoom > self.__config.maxzoom:
             raise tilekiln.errors.ZoomNotDefined
 
         with self.__pool.connection() as conn:
             with conn.cursor() as curs:
+                layer_queries = self.__config.layer_queries(tile)
+                if layer_filters:
+                    # Filter layers if filters are provided
+                    layer_queries = {name: sql for name, sql in layer_queries.items()
+                                     if name in layer_filters}
                 return {name: self.__render_sql(curs, sql)
-                        for name, sql in self.__config.layer_queries(tile).items()}
+                        for name, sql in layer_queries.items()}
 
     def render_layer(self, layer: str, tile: Tile) -> bytes:
         with self.__pool.connection() as conn:

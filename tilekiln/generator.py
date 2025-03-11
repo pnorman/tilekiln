@@ -34,10 +34,10 @@ def setup(config: Config, source_kwargs, storage_kwargs) -> None:  # type: ignor
     tileset = Tileset.from_config(storage, config)
 
 
-def worker(tile: Tile) -> None:
+def worker(tile: Tile, layer_filters: set[str] | None = None) -> None:
     global kiln, tileset
     try:
-        mvt = kiln.render_all(tile)
+        mvt = kiln.render_all(tile, layer_filters)
         # Because everything was rendered we don't need to check for missing layers
         tileset.save_tile(tile, mvt)
     except Exception as e:
@@ -57,15 +57,19 @@ def layer_worker(work: tuple[Tile, set[str]]) -> None:
         raise RuntimeError(f"Error generating {tile}") from e
 
 
-def generate(config: Config, source_kwargs, storage_kwargs,  # type: ignore[no-untyped-def]
-             tiles: Collection[Tile], num_processes: int) -> None:
+def generate(  # type: ignore[no-untyped-def]
+        config: Config, source_kwargs, storage_kwargs,
+        tiles: Collection[Tile], num_processes: int,
+        layer_filters: set[str] | None = None) -> None:
 
     # If there are no processes and no tiles then there's nothing to do.
     if num_processes == 0 and len(tiles) == 0:
         return
 
     with mp.Pool(num_processes, setup, (config, source_kwargs, storage_kwargs)) as pool:
-        imap_it = pool.imap_unordered(worker, tiles, 100)
+        # Use starmap to handle multiple arguments
+        work_items = [(tile, layer_filters) for tile in tiles]
+        imap_it = pool.starmap(worker, work_items, 100)
         pool.close()
         pool.join()
 
