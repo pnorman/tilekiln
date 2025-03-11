@@ -11,9 +11,11 @@ class Kiln:
     The kiln is what actually generates the tiles, using the config to compute SQL,
     and a DB connection to execute it
     '''
-    def __init__(self, config: Config, pool: psycopg_pool.ConnectionPool):
+    def __init__(self, config: Config, pool: psycopg_pool.ConnectionPool,
+                 layers: list[str] | None = None):
         self.__config = config
         self.__pool = pool
+        self.__layers = layers  # Store the layers to render. None means all layers.
 
     def render_all(self, tile: Tile) -> dict[str, bytes]:
         if tile.zoom < self.__config.minzoom or tile.zoom > self.__config.maxzoom:
@@ -21,8 +23,19 @@ class Kiln:
 
         with self.__pool.connection() as conn:
             with conn.cursor() as curs:
-                return {name: self.__render_sql(curs, sql)
-                        for name, sql in self.__config.layer_queries(tile).items()}
+                # Get all available layer queries for this tile
+                all_queries = self.__config.layer_queries(tile)
+
+                # Filter for specific layers if needed
+                if self.__layers:
+                    filtered_queries = {name: sql for name, sql in all_queries.items()
+                                        if name in self.__layers}
+                    return {name: self.__render_sql(curs, sql)
+                            for name, sql in filtered_queries.items()}
+                else:
+                    # Default behavior: render all layers
+                    return {name: self.__render_sql(curs, sql)
+                            for name, sql in all_queries.items()}
 
     def render_layer(self, layer: str, tile: Tile) -> bytes:
         with self.__pool.connection() as conn:
