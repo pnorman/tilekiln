@@ -34,10 +34,12 @@ def generate() -> None:
 @click.option('--storage-port')
 @click.option('--storage-username')
 @click.option('--progress/--no-progress', help='Display progress bar')
+@click.option('--layer', multiple=True,
+              help='Specific layer to render (can be used multiple times)')
 def tiles(config: int, num_threads: int,
           source_dbname: str, source_host: str, source_port: int, source_username: str,
           storage_dbname: str, storage_host: str, storage_port: int, storage_username: str,
-          progress: bool) -> None:
+          progress: bool, layer: tuple[str]) -> None:
     '''Generate specific tiles.
 
     A list of z/x/y tiles is read from stdin and those tiles are generated and saved
@@ -49,7 +51,14 @@ def tiles(config: int, num_threads: int,
     tiles = {Tile.from_string(t) for t in sys.stdin}
     threads = min(num_threads, len(tiles))  # No point in more threads than tiles
 
-    click.echo(f"Rendering {len(tiles)} tiles over {threads} threads")
+    # Convert layers to a set if provided
+    layer_filters = set(layer) if layer else None
+
+    if layer_filters:
+        layer_str = ', '.join(layer_filters)
+        click.echo(f"Rendering {len(tiles)} tiles for layers {layer_str} over {threads} threads")
+    else:
+        click.echo(f"Rendering {len(tiles)} tiles over {threads} threads")
 
     source_kwargs = {"dbname": source_dbname,
                      "host": source_host,
@@ -60,9 +69,10 @@ def tiles(config: int, num_threads: int,
                       "port": storage_port,
                       "user": storage_username}
     if progress:
-        tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tqdm(tiles), threads)
+        tilekiln.generator.generate(
+            c, source_kwargs, storage_kwargs, tqdm(tiles), threads, layer_filters)
     else:
-        tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tiles, threads)
+        tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tiles, threads, layer_filters)
 
 
 @generate.command()
@@ -80,16 +90,27 @@ def tiles(config: int, num_threads: int,
 @click.option('--min-zoom', type=click.INT, required=True)
 @click.option('--max-zoom', type=click.INT, required=True)
 @click.option('--progress/--no-progress', help='Display progress bar')
+@click.option('--layer', multiple=True,
+              help='Specific layer to render (can be used multiple times)')
 def zooms(config: int, num_threads: int,
           source_dbname: str, source_host: str, source_port: int, source_username: str,
           storage_dbname: str, storage_host: str, storage_port: int, storage_username: str,
-          min_zoom: int, max_zoom: int, progress: bool) -> None:
+          min_zoom: int, max_zoom: int, progress: bool, layer: tuple[str]) -> None:
 
     c = tilekiln.load_config(config)
 
     tiles = Tilerange(min_zoom, max_zoom)
     threads = min(num_threads, len(tiles))  # No point in more threads than tiles
-    click.echo(f"Rendering {len(tiles)} tiles over {threads} threads")
+
+    # Convert layers to a set if provided
+    layer_filters = set(layer) if layer else None
+
+    if layer_filters:
+        layer_str = ', '.join(layer_filters)
+        click.echo(f"Rendering {len(tiles)} tiles for layers {layer_str} over {threads} threads")
+    else:
+        click.echo(f"Rendering {len(tiles)} tiles over {threads} threads")
+
     source_kwargs = {"dbname": source_dbname,
                      "host": source_host,
                      "port": source_port,
@@ -99,9 +120,10 @@ def zooms(config: int, num_threads: int,
                       "port": storage_port,
                       "user": storage_username}
     if progress:
-        tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tqdm(tiles), threads)
+        tilekiln.generator.generate(
+            c, source_kwargs, storage_kwargs, tqdm(tiles), threads, layer_filters)
     else:
-        tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tiles, threads)
+        tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tiles, threads, layer_filters)
 
 
 @generate.command()
