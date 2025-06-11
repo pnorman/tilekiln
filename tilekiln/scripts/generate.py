@@ -80,11 +80,16 @@ def tiles(config: int, num_threads: int,
 @click.option('--min-zoom', type=click.INT, required=True)
 @click.option('--max-zoom', type=click.INT, required=True)
 @click.option('--progress/--no-progress', help='Display progress bar')
+@click.option('--layer', multiple=True)
 def zooms(config: int, num_threads: int,
           source_dbname: str, source_host: str, source_port: int, source_username: str,
           storage_dbname: str, storage_host: str, storage_port: int, storage_username: str,
-          min_zoom: int, max_zoom: int, progress: bool) -> None:
+          min_zoom: int, max_zoom: int, progress: bool, layer: tuple[str]) -> None:
 
+    if layer == ():
+        layers = None
+    else:
+        layers = set(layer)
     c = tilekiln.load_config(config)
 
     tiles = Tilerange(min_zoom, max_zoom)
@@ -99,9 +104,9 @@ def zooms(config: int, num_threads: int,
                       "port": storage_port,
                       "user": storage_username}
     if progress:
-        tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tqdm(tiles), threads)
+        tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tqdm(tiles), threads, layers)
     else:
-        tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tiles, threads)
+        tilekiln.generator.generate(c, source_kwargs, storage_kwargs, tiles, threads, layers)
 
 
 @generate.command()
@@ -143,8 +148,8 @@ def layers(config: int, num_threads: int,
                       "port": storage_port,
                       "user": storage_username}
     if progress:
-        tilekiln.generator.generate_layers(c, source_kwargs, storage_kwargs,
-                                           tqdm(layers.items()), threads)
+        tilekiln.generator.generate_tilelayers(c, source_kwargs, storage_kwargs,
+                                               tqdm(layers.items()), threads)
     else:
-        tilekiln.generator.generate_layers(c, source_kwargs, storage_kwargs,
-                                           layers.items(), threads)
+        tilekiln.generator.generate_tilelayers(c, source_kwargs, storage_kwargs,
+                                               layers.items(), threads)
