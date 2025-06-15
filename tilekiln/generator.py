@@ -89,7 +89,7 @@ def generate_tilelayers(config: Config, source_kwargs,
     if num_processes == 0 and len(tilelayers) == 0:
         return
 
-    with mp.Pool(num_processes, setup, (config, source_kwargs, storage_kwargs)) as pool:
+    with mp.Pool(num_processes, setup, (config, None, source_kwargs, storage_kwargs)) as pool:
         imap_it = pool.imap_unordered(tilelayer_worker, tilelayers, 100)
         pool.close()
         pool.join()
