@@ -7,10 +7,11 @@ from tilekiln.tile import Tile
 
 
 class Kiln:
-    '''
+    """
     The kiln is what actually generates the tiles, using the config to compute SQL,
     and a DB connection to execute it
-    '''
+    """
+
     def __init__(self, config: Config, pool: psycopg_pool.ConnectionPool):
         self.__config = config
         self.__pool = pool
@@ -21,8 +22,10 @@ class Kiln:
 
         with self.__pool.connection() as conn:
             with conn.cursor() as curs:
-                return {name: self.__render_sql(curs, sql)
-                        for name, sql in self.__config.layer_queries(tile).items()}
+                return {
+                    name: self.__render_sql(curs, sql)
+                    for name, sql in self.__config.layer_queries(tile).items()
+                }
 
     def render_layer(self, layer: str, tile: Tile) -> bytes:
         with self.__pool.connection() as conn:
@@ -32,7 +35,7 @@ class Kiln:
     def __render_sql(self, curs: psycopg.Cursor, sql: str | None) -> bytes:
         if sql is None:
             # None is a query for a layer not present in this zoom
-            return b''
+            return b""
 
         curs.execute(sql, binary=True)
         for record in curs:

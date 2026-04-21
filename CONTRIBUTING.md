@@ -17,10 +17,11 @@ A development install requires Python 3.10+, and normally will require a Postgre
 For a conventional development install on a machine running a recent common Linux distribution with standard settings,
 
 ```bash
-python3 -m venv venv
-. venv/bin/activate
-pip install -e .
-pip install flake8 pytest
+git clone https://github.com/pnorman/tilekiln.git
+cd ofastlylog
+uv sync
+uv run pre-commit install
+uv run tilekiln --help
 ```
 
 You can then edit code and run the `tilekiln` command.

@@ -1,7 +1,7 @@
 from tilekiln.tile import Tile
 
 
-class Tilerange():
+class Tilerange:
     def __init__(self, minz, maxz):
         self.minid = Tile(minz, 0, 0).tileid
         self.maxid = Tile(maxz + 1, 0, 0).tileid

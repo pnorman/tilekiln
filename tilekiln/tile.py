@@ -2,11 +2,10 @@ import pmtiles.tile  # type: ignore
 
 
 class Tile:
-    __slots__ = ("tileid")
+    __slots__ = "tileid"
 
     def __init__(self, zoom: int, x: int, y: int):
-        '''Creates a tile object, with x, y, and zoom
-        '''
+        """Creates a tile object, with x, y, and zoom"""
         self.tileid = pmtiles.tile.zxy_to_tileid(zoom, x, y)
 
     def __eq__(self, other):
@@ -51,14 +50,12 @@ class Tile:
         return cls(zoom, x, y)
 
     def bbox(self, buffer) -> str:
-        '''Returns the bounding box for a tile
-        '''
-        return f'''ST_TileEnvelope({self.zoom}, {self.x}, {self.y}, margin=>{buffer})'''
+        """Returns the bounding box for a tile"""
+        return f"""ST_TileEnvelope({self.zoom}, {self.x}, {self.y}, margin=>{buffer})"""
 
 
 def layer_frominput(input: str) -> dict[Tile, set[str]]:
-    '''Generates a list of tile layers from string
-    '''
+    """Generates a list of tile layers from string"""
 
     layers: dict[Tile, set[str]] = {}
     for line in input.split("\n"):

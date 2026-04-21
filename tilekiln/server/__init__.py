@@ -22,8 +22,10 @@ TILEKILN_CONFIG = "TILEKILN_CONFIG"
 TILEKILN_URL = "TILEKILN_URL"
 TILEKILN_THREADS = "TILEKILN_THREADS"
 
-STANDARD_HEADERS: dict[str, str] = {"Access-Control-Allow-Origin": "*",
-                                    "Access-Control-Allow-Methods": "GET, HEAD"}
+STANDARD_HEADERS: dict[str, str] = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, HEAD",
+}
 
 kiln: Kiln
 config: Config
@@ -46,13 +48,17 @@ def change_tilejson_url(tilejson: str, baseurl: str) -> str:
 
 @server.on_event("startup")
 def load_server_config():
-    '''Load the config for the server with static pre-rendered tiles'''
+    """Load the config for the server with static pre-rendered tiles"""
     global storage
     global tilesets
     # Because the DB connection variables are passed as standard PG* vars,
     # a plain ConnectionPool() will connect to the right DB
-    conn = psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
-                                       check=psycopg_pool.ConnectionPool.check_connection)
+    conn = psycopg_pool.ConnectionPool(
+        min_size=1,
+        max_size=1,
+        num_workers=1,
+        check=psycopg_pool.ConnectionPool.check_connection,
+    )
     # TODO: Make readonly?
 
     storage = Storage(conn)
@@ -87,17 +93,25 @@ def load_live_config():
     if "STORAGE_PGUSER" in os.environ:
         storage_args["username"] = os.environ["STORAGE_PGUSER"]
 
-    storage_pool = psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
-                                               check=psycopg_pool.ConnectionPool.check_connection,
-                                               kwargs=storage_args)
+    storage_pool = psycopg_pool.ConnectionPool(
+        min_size=1,
+        max_size=1,
+        num_workers=1,
+        check=psycopg_pool.ConnectionPool.check_connection,
+        kwargs=storage_args,
+    )
 
     storage = Storage(storage_pool)
 
     # Storing the tileset in the dict allows some commonalities in code later
     tilesets[config.id] = Tileset.from_config(storage, config)
-    generate_pool = psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
-                                                check=psycopg_pool.ConnectionPool.check_connection,
-                                                kwargs=generate_args)
+    generate_pool = psycopg_pool.ConnectionPool(
+        min_size=1,
+        max_size=1,
+        num_workers=1,
+        check=psycopg_pool.ConnectionPool.check_connection,
+        kwargs=generate_args,
+    )
     global kiln
     kiln = Kiln(config, generate_pool)
 
@@ -125,11 +139,16 @@ def favicon():
 def tilejson(prefix: str):
     global tilesets
     if prefix not in tilesets:
-        raise HTTPException(status_code=404, detail=f'''Tileset {prefix} not found on server.''')
-    return Response(content=change_tilejson_url(tilesets[prefix].tilejson,
-                                                os.environ[TILEKILN_URL] + f"/{prefix}"),
-                    media_type="application/json",
-                    headers=STANDARD_HEADERS)
+        raise HTTPException(
+            status_code=404, detail=f"""Tileset {prefix} not found on server."""
+        )
+    return Response(
+        content=change_tilejson_url(
+            tilesets[prefix].tilejson, os.environ[TILEKILN_URL] + f"/{prefix}"
+        ),
+        media_type="application/json",
+        headers=STANDARD_HEADERS,
+    )
 
 
 @server.head("/{prefix}/{zoom}/{x}/{y}.mvt")
@@ -137,46 +156,59 @@ def tilejson(prefix: str):
 def serve_tile(prefix: str, zoom: int, x: int, y: int):
     global tilesets
     if prefix not in tilesets:
-        raise HTTPException(status_code=404, detail=f"Tileset {prefix} not found on server.")
+        raise HTTPException(
+            status_code=404, detail=f"Tileset {prefix} not found on server."
+        )
 
     try:
         tile, generated = tilesets[prefix].get_tile(Tile(zoom, x, y))
     except tilekiln.errors.ZoomNotDefined:
-        raise HTTPException(status_code=410,
-                            detail=f'''Tileset {zoom} not available for tileset {prefix}.''')
+        raise HTTPException(
+            status_code=410,
+            detail=f"""Tileset {zoom} not available for tileset {prefix}.""",
+        )
 
-    response = b''
+    response = b""
     for data in tile.values():
         if data is None:
-            raise HTTPException(status_code=404,
-                                detail=f"Tile {prefix}/{zoom}/{x}/{y} not found in storage.")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Tile {prefix}/{zoom}/{x}/{y} not found in storage.",
+            )
         response += data
 
     # We use the generated timestamp on the assumption that a specific
     # x/y/z will not be generated twice in the same ms.
     headers: dict[str, str] = {}
     if generated is not None:
-        headers = {"Last-Modified": generated.strftime(HTTP_TIME),
-                   "E-tag": generated.strftime("%s.%f")}
-    return Response(response, media_type=MVT_MIME_TYPE,
-                    headers=STANDARD_HEADERS | headers)
+        headers = {
+            "Last-Modified": generated.strftime(HTTP_TIME),
+            "E-tag": generated.strftime("%s.%f"),
+        }
+    return Response(
+        response, media_type=MVT_MIME_TYPE, headers=STANDARD_HEADERS | headers
+    )
 
 
 @live.head("/{prefix}/{zoom}/{x}/{y}.mvt")
 @live.get("/{prefix}/{zoom}/{x}/{y}.mvt")
-def live_serve_tile(prefix: str, zoom: int, x: int, y:  int):
+def live_serve_tile(prefix: str, zoom: int, x: int, y: int):
     global tilesets
     if prefix not in tilesets:
-        raise HTTPException(status_code=404, detail=f"Tileset {prefix} not found on server.")
+        raise HTTPException(
+            status_code=404, detail=f"Tileset {prefix} not found on server."
+        )
 
     # Attempt to serve a stored tile
     try:
         existing, generated = tilesets[prefix].get_tile(Tile(zoom, x, y))
     except tilekiln.errors.ZoomNotDefined:
-        raise HTTPException(status_code=410,
-                            detail=f'''Tileset {zoom} not available for tileset {prefix}.''')
+        raise HTTPException(
+            status_code=410,
+            detail=f"""Tileset {zoom} not available for tileset {prefix}.""",
+        )
 
-    response = b''
+    response = b""
     missing = []
     for layer, data in existing.items():
         if data is None:
@@ -188,10 +220,13 @@ def live_serve_tile(prefix: str, zoom: int, x: int, y:  int):
     if missing == []:
         headers: dict[str, str] = {}
         if generated is not None:
-            headers = {"Last-Modified": generated.strftime(HTTP_TIME),
-                       "E-tag": generated.strftime("%s.%f")}
-        return Response(response, media_type=MVT_MIME_TYPE,
-                        headers=STANDARD_HEADERS | headers)
+            headers = {
+                "Last-Modified": generated.strftime(HTTP_TIME),
+                "E-tag": generated.strftime("%s.%f"),
+            }
+        return Response(
+            response, media_type=MVT_MIME_TYPE, headers=STANDARD_HEADERS | headers
+        )
 
     # Storage miss, so generate a new tile
     # TODO: partially generate a new tile
@@ -201,14 +236,15 @@ def live_serve_tile(prefix: str, zoom: int, x: int, y:  int):
     # TODO: Make async so tile is saved and response returned in parallel
     generated = tilesets[prefix].save_tile(tile, new_layers)
 
-    mvt = b''.join(new_layers.values()) + b''.join([data for data in existing.values()
-                                                    if data is not None])
+    mvt = b"".join(new_layers.values()) + b"".join(
+        [data for data in existing.values() if data is not None]
+    )
     if generated is not None:
-        headers = {"Last-Modified": generated.strftime(HTTP_TIME),
-                   "E-tag": generated.strftime("%s.%f")}
+        headers = {
+            "Last-Modified": generated.strftime(HTTP_TIME),
+            "E-tag": generated.strftime("%s.%f"),
+        }
     else:
         headers = {}
 
-    return Response(mvt,
-                    media_type=MVT_MIME_TYPE,
-                    headers=STANDARD_HEADERS | headers)
+    return Response(mvt, media_type=MVT_MIME_TYPE, headers=STANDARD_HEADERS | headers)
