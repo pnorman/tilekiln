@@ -22,10 +22,9 @@ kiln: Kiln
 config: Config
 
 dev = FastAPI()
-dev.add_middleware(CORSMiddleware,
-                   allow_origins=["*"],
-                   allow_methods=["*"],
-                   allow_headers=["*"])
+dev.add_middleware(
+    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+)
 
 
 @dev.on_event("startup")
@@ -36,8 +35,12 @@ def load_config():
     # Because the DB connection variables are passed as standard PG* vars,
     # a plain connect() will connect to the right DB
 
-    pool = psycopg_pool.ConnectionPool(min_size=1, max_size=1, num_workers=1,
-                                       check=psycopg_pool.ConnectionPool.check_connection)
+    pool = psycopg_pool.ConnectionPool(
+        min_size=1,
+        max_size=1,
+        num_workers=1,
+        check=psycopg_pool.ConnectionPool.check_connection,
+    )
 
     global kiln
     kiln = Kiln(config, pool)
@@ -67,19 +70,26 @@ def redirect_tilejson():
 def tilejson(prefix):
     global config
     if prefix != config.id:
-        raise HTTPException(status_code=404, detail=f"Tileset {prefix} not found on server.")
-    return Response(content=config.tilejson(os.environ[TILEKILN_URL]),
-                    media_type="application/json",
-                    headers=STANDARD_HEADERS)
+        raise HTTPException(
+            status_code=404, detail=f"Tileset {prefix} not found on server."
+        )
+    return Response(
+        content=config.tilejson(os.environ[TILEKILN_URL]),
+        media_type="application/json",
+        headers=STANDARD_HEADERS,
+    )
 
 
 @dev.head("/{prefix}/{zoom}/{x}/{y}.mvt")
 @dev.get("/{prefix}/{zoom}/{x}/{y}.mvt")
-def serve_tile(prefix: str, zoom: int, x: int, y:  int):
+def serve_tile(prefix: str, zoom: int, x: int, y: int):
     global config
     if prefix != config.id:
-        raise HTTPException(status_code=404, detail=f"Tileset {prefix} not found on server.")
+        raise HTTPException(
+            status_code=404, detail=f"Tileset {prefix} not found on server."
+        )
     global kiln
-    tile = b''.join(kiln.render_all(Tile(zoom, x, y)).values())
-    return Response(tile, media_type="application/vnd.mapbox-vector-tile",
-                    headers=STANDARD_HEADERS)
+    tile = b"".join(kiln.render_all(Tile(zoom, x, y)).values())
+    return Response(
+        tile, media_type="application/vnd.mapbox-vector-tile", headers=STANDARD_HEADERS
+    )

@@ -12,8 +12,10 @@ class TestTile(TestCase):
 
     def test_bounds(self):
         t = Tile(3, 2, 1)
-        self.assertEqual(t.bbox(0), 'ST_TileEnvelope(3, 2, 1, margin=>0)')
-        self.assertEqual(t.bbox(8/4096), 'ST_TileEnvelope(3, 2, 1, margin=>0.001953125)')
+        self.assertEqual(t.bbox(0), "ST_TileEnvelope(3, 2, 1, margin=>0)")
+        self.assertEqual(
+            t.bbox(8 / 4096), "ST_TileEnvelope(3, 2, 1, margin=>0.001953125)"
+        )
 
     def test_eq(self):
         t1 = Tile(3, 2, 1)
@@ -44,10 +46,10 @@ class TestTile(TestCase):
         self.assertRaises(ValueError, Tile.from_string, "a/b/c")
 
     def test_tilelayer(self):
-        self.assertEqual(layer_frominput("0/0/0,lyr1"),
-                         {Tile(0, 0, 0): {"lyr1"}})
-        self.assertEqual(layer_frominput("0/0/0,lyr1\n"),
-                         {Tile(0, 0, 0): {"lyr1"}})
+        self.assertEqual(layer_frominput("0/0/0,lyr1"), {Tile(0, 0, 0): {"lyr1"}})
+        self.assertEqual(layer_frominput("0/0/0,lyr1\n"), {Tile(0, 0, 0): {"lyr1"}})
 
-        self.assertEqual(layer_frominput("0/0/0,lyr1\n1/0/0,lyr2\n0/0/0,lyr2"),
-                         {Tile(0, 0, 0): {"lyr1", "lyr2"}, Tile(1, 0, 0): {"lyr2"}})
+        self.assertEqual(
+            layer_frominput("0/0/0,lyr1\n1/0/0,lyr2\n0/0/0,lyr2"),
+            {Tile(0, 0, 0): {"lyr1", "lyr2"}, Tile(1, 0, 0): {"lyr2"}},
+        )

@@ -105,11 +105,11 @@ class TestStorage(TestCase):
 
         self.assertRegex(calls[0], r"(?ims)INSERT INTO.*metadata.*VALUES.*ON CONFLICT")
         self.assertRegex(calls[1], r"(?ims)CREATE TABLE.*foo.*")
-        self.assertRegex(calls[1], r'''(?ims)"lyr1_generated" timestamptz''')
-        self.assertRegex(calls[1], r'''(?ims)"lyr1_data" bytea''')
+        self.assertRegex(calls[1], r"""(?ims)"lyr1_generated" timestamptz""")
+        self.assertRegex(calls[1], r"""(?ims)"lyr1_data" bytea""")
         # Check timestamps are before tile data for storage reasons
-        self.assertRegex(calls[1], r'''(?ims)timestamptz.*bytea''')
-        self.assertNotRegex(calls[1], r'''(?ims)bytea.*timestamptz''')
+        self.assertRegex(calls[1], r"""(?ims)timestamptz.*bytea""")
+        self.assertNotRegex(calls[1], r"""(?ims)bytea.*timestamptz""")
 
         self.assertRegex(calls[2], r"(?ims)CREATE TABLE.*foo_z0")
         self.assertRegex(calls[2], r"(?ims)PARTITION OF.*foo")
@@ -142,12 +142,15 @@ class TestStorage(TestCase):
         while not rets.empty():
             rets.get()
 
-        rets.put({"id": "foo",
-                  "layers": ["lyr1", "lyr2"],
-                  "minzoom": 0,
-                  "maxzoom": 2,
-                  "tilejson": json.loads("{}")
-                  })
+        rets.put(
+            {
+                "id": "foo",
+                "layers": ["lyr1", "lyr2"],
+                "minzoom": 0,
+                "maxzoom": 2,
+                "tilejson": json.loads("{}"),
+            }
+        )
 
         tilesets = storage.get_tilesets()
         tileset = next(tilesets)
@@ -156,7 +159,7 @@ class TestStorage(TestCase):
         self.assertEqual(tileset.layers, ["lyr1", "lyr2"])
         self.assertEqual(tileset.minzoom, 0)
         self.assertEqual(tileset.maxzoom, 2)
-        self.assertEqual(tileset.tilejson, '{}')
+        self.assertEqual(tileset.tilejson, "{}")
 
     def test_metadata(self):
         calls = []
@@ -174,12 +177,15 @@ class TestStorage(TestCase):
         rets = queue.SimpleQueue()
         pool = FakePool(calls, rets)
 
-        rets.put({"id": "foo",
-                  "layers": ["lyr1", "lyr2"],
-                  "minzoom": 0,
-                  "maxzoom": 2,
-                  "tilejson": json.loads("{}")
-                  })
+        rets.put(
+            {
+                "id": "foo",
+                "layers": ["lyr1", "lyr2"],
+                "minzoom": 0,
+                "maxzoom": 2,
+                "tilejson": json.loads("{}"),
+            }
+        )
         rets.put({"lyr1_data": b"bar", "lyr2_data": b"baz", "generated": "datetime"})
         storage = Storage(pool)
         result, generated = storage.get_tile("foo", Tile(0, 0, 0))
@@ -188,34 +194,43 @@ class TestStorage(TestCase):
         self.assertEqual(generated, "datetime")
 
         # calls[0] is get_tileset call tested above. TODO: test it above
-        self.assertRegex(calls[1],
-                         r"(?ims)SELECT.*lyr1_generated.*.*lyr1_data.*FROM.*foo.*WHERE.*zoom")
+        self.assertRegex(
+            calls[1],
+            r"(?ims)SELECT.*lyr1_generated.*.*lyr1_data.*FROM.*foo.*WHERE.*zoom",
+        )
 
         calls.clear()
         while not rets.empty():
             rets.get()
 
         # Test no tile found
-        rets.put({"id": "foo",
-                  "layers": ["lyr1", "lyr2"],
-                  "minzoom": 0,
-                  "maxzoom": 2,
-                  "tilejson": json.loads("{}")
-                  })
+        rets.put(
+            {
+                "id": "foo",
+                "layers": ["lyr1", "lyr2"],
+                "minzoom": 0,
+                "maxzoom": 2,
+                "tilejson": json.loads("{}"),
+            }
+        )
         rets.put(None)
-        self.assertEqual(storage.get_tile("foo", Tile(0, 0, 0)),
-                         ({"lyr1": None, "lyr2": None}, None))
+        self.assertEqual(
+            storage.get_tile("foo", Tile(0, 0, 0)), ({"lyr1": None, "lyr2": None}, None)
+        )
 
         calls.clear()
         while not rets.empty():
             rets.get()
 
-        rets.put({"id": "foo",
-                  "layers": ["lyr1", "lyr2"],
-                  "minzoom": 0,
-                  "maxzoom": 2,
-                  "tilejson": json.loads("{}")
-                  })
+        rets.put(
+            {
+                "id": "foo",
+                "layers": ["lyr1", "lyr2"],
+                "minzoom": 0,
+                "maxzoom": 2,
+                "tilejson": json.loads("{}"),
+            }
+        )
 
         rets.put({"lyr1_data": b"bar", "lyr2_data": None, "generated": "datetime"})
         storage = Storage(pool)
@@ -231,119 +246,175 @@ class TestStorage(TestCase):
         while not rets.empty():
             rets.get()
 
-        rets.put({"id": "foo",
-                  "layers": ["lyr1", "lyr2"],
-                  "minzoom": 0,
-                  "maxzoom": 2,
-                  "tilejson": json.loads("{}")
-                  })
+        rets.put(
+            {
+                "id": "foo",
+                "layers": ["lyr1", "lyr2"],
+                "minzoom": 0,
+                "maxzoom": 2,
+                "tilejson": json.loads("{}"),
+            }
+        )
 
-        rets.put({"lyr1_data": b"bar", "lyr2_data": b"baz",
-                  "lyr1_generated": "datetime1", "lyr2_generated": "datetime2"})
-        self.assertEqual(storage.get_tile_details("foo", Tile(0, 0, 0)),
-                         {"lyr1": (b"bar", "datetime1"), "lyr2": (b"baz", "datetime2")})
-
-        calls.clear()
-        while not rets.empty():
-            rets.get()
-
-        rets.put({"id": "foo",
-                  "layers": ["lyr1", "lyr2"],
-                  "minzoom": 0,
-                  "maxzoom": 2,
-                  "tilejson": json.loads("{}")
-                  })
-
-        rets.put({"lyr1_data": b"bar", "lyr2_data": None,
-                  "lyr1_generated": "datetime1", "lyr2_generated": None})
-
-        self.assertEqual(storage.get_tile_details("foo", Tile(0, 0, 0)),
-                         {"lyr1": (b"bar", "datetime1"), "lyr2": None})
+        rets.put(
+            {
+                "lyr1_data": b"bar",
+                "lyr2_data": b"baz",
+                "lyr1_generated": "datetime1",
+                "lyr2_generated": "datetime2",
+            }
+        )
+        self.assertEqual(
+            storage.get_tile_details("foo", Tile(0, 0, 0)),
+            {"lyr1": (b"bar", "datetime1"), "lyr2": (b"baz", "datetime2")},
+        )
 
         calls.clear()
         while not rets.empty():
             rets.get()
 
-        rets.put({"id": "foo",
-                  "layers": ["lyr1", "lyr2"],
-                  "minzoom": 0,
-                  "maxzoom": 2,
-                  "tilejson": json.loads("{}")
-                  })
+        rets.put(
+            {
+                "id": "foo",
+                "layers": ["lyr1", "lyr2"],
+                "minzoom": 0,
+                "maxzoom": 2,
+                "tilejson": json.loads("{}"),
+            }
+        )
+
+        rets.put(
+            {
+                "lyr1_data": b"bar",
+                "lyr2_data": None,
+                "lyr1_generated": "datetime1",
+                "lyr2_generated": None,
+            }
+        )
+
+        self.assertEqual(
+            storage.get_tile_details("foo", Tile(0, 0, 0)),
+            {"lyr1": (b"bar", "datetime1"), "lyr2": None},
+        )
+
+        calls.clear()
+        while not rets.empty():
+            rets.get()
+
+        rets.put(
+            {
+                "id": "foo",
+                "layers": ["lyr1", "lyr2"],
+                "minzoom": 0,
+                "maxzoom": 2,
+                "tilejson": json.loads("{}"),
+            }
+        )
         rets.put({"generated": "datetime"})
 
-        self.assertEqual(storage.save_tile("foo", Tile(2, 1, 0),
-                                           {"lyr1": b"bar", "lyr2": b"baz"}), "datetime")
+        self.assertEqual(
+            storage.save_tile("foo", Tile(2, 1, 0), {"lyr1": b"bar", "lyr2": b"baz"}),
+            "datetime",
+        )
         self.assertRegex(calls[0], r"(?ims)minzoom.*maxzoom")
         self.assertRegex(calls[1], r"(?ims)INSERT INTO.*foo_z2")
         # Test colums are right
-        self.assertRegex(calls[1],
-                         r"(?ms)\(zoom[^\)]+x[^\)]+y[^\)]+lyr1_data[^\)]+lyr2_data[^\)]*\)")
+        self.assertRegex(
+            calls[1], r"(?ms)\(zoom[^\)]+x[^\)]+y[^\)]+lyr1_data[^\)]+lyr2_data[^\)]*\)"
+        )
         # check that the z, x, y appear in the right order
-        self.assertRegex(calls[1], r'''(?ims)VALUES\s+\(\s*2,\s+1,\s+0,\s+''')
+        self.assertRegex(calls[1], r"""(?ims)VALUES\s+\(\s*2,\s+1,\s+0,\s+""")
 
         # check there are placeholders for the data
-        self.assertRegex(calls[1], r'''(?ims)VALUES\s+\([^\)]*%[^,]*s,\s*%[^,]*s,''')
+        self.assertRegex(calls[1], r"""(?ims)VALUES\s+\([^\)]*%[^,]*s,\s*%[^,]*s,""")
         # check that the timestamps are set
-        self.assertRegex(calls[1],
-                         r"(?s)VALUES\s+\(.*"  # .* covers placeholders found above
-                         r"statement_timestamp\(\)[^\)]*statement_timestamp\(\)[^\)]*\)")
+        self.assertRegex(
+            calls[1],
+            r"(?s)VALUES\s+\(.*"  # .* covers placeholders found above
+            r"statement_timestamp\(\)[^\)]*statement_timestamp\(\)[^\)]*\)",
+        )
 
         self.assertRegex(calls[1], r"(?ims)ON CONFLICT\s+\(zoom,\s+x,\s+y\s*\)")
         # Test that the upsert sets data to something based on excluded
-        self.assertRegex(calls[1], r"(?ims)DO UPDATE.*lyr1_data[^,]+=[^,]*EXCLUDED[^,]+lyr1_data")
-        self.assertRegex(calls[1], r"(?ims)DO UPDATE.*lyr2_data[^,]+=[^,]*EXCLUDED[^,]+lyr2_data")
+        self.assertRegex(
+            calls[1], r"(?ims)DO UPDATE.*lyr1_data[^,]+=[^,]*EXCLUDED[^,]+lyr1_data"
+        )
+        self.assertRegex(
+            calls[1], r"(?ims)DO UPDATE.*lyr2_data[^,]+=[^,]*EXCLUDED[^,]+lyr2_data"
+        )
 
         # test that upserts sets generated to something based on stored and new lyr1_generated,
         # statement_timestamp, and that old generated is referenced
-        self.assertRegex(calls[1],
-                         r"(?ims)DO UPDATE.*lyr1_generated[^,]*=[^,]*STORE\.[^,]*lyr1_data")
-        self.assertRegex(calls[1],
-                         r"(?ims)DO UPDATE.*lyr1_generated[^,]*=[^,]*EXCLUDED\.[^,]*lyr1_data")
-        self.assertRegex(calls[1],
-                         r"(?ims)DO UPDATE.*lyr1_generated[^,]+=[^,]*statement_timestamp")
-        self.assertRegex(calls[1],
-                         r"(?ims)DO UPDATE.*lyr1_generated[^,]+=[^,]*STORE\.[^,]*lyr1_generated")
-        self.assertRegex(calls[1],
-                         r"(?ims)DO UPDATE.*lyr2_generated[^,]*=[^,]*STORE\.[^,]*lyr2_data")
-        self.assertRegex(calls[1],
-                         r"(?ims)DO UPDATE.*lyr2_generated[^,]*=[^,]*EXCLUDED\.[^,]*lyr2_data")
-        self.assertRegex(calls[1],
-                         r"(?ims)DO UPDATE.*lyr2_generated[^,]+=[^,]*statement_timestamp")
-        self.assertRegex(calls[1],
-                         r"(?ims)DO UPDATE.*lyr2_generated[^,]+=[^,]*STORE\.[^,]*lyr2_generated")
+        self.assertRegex(
+            calls[1], r"(?ims)DO UPDATE.*lyr1_generated[^,]*=[^,]*STORE\.[^,]*lyr1_data"
+        )
+        self.assertRegex(
+            calls[1],
+            r"(?ims)DO UPDATE.*lyr1_generated[^,]*=[^,]*EXCLUDED\.[^,]*lyr1_data",
+        )
+        self.assertRegex(
+            calls[1], r"(?ims)DO UPDATE.*lyr1_generated[^,]+=[^,]*statement_timestamp"
+        )
+        self.assertRegex(
+            calls[1],
+            r"(?ims)DO UPDATE.*lyr1_generated[^,]+=[^,]*STORE\.[^,]*lyr1_generated",
+        )
+        self.assertRegex(
+            calls[1], r"(?ims)DO UPDATE.*lyr2_generated[^,]*=[^,]*STORE\.[^,]*lyr2_data"
+        )
+        self.assertRegex(
+            calls[1],
+            r"(?ims)DO UPDATE.*lyr2_generated[^,]*=[^,]*EXCLUDED\.[^,]*lyr2_data",
+        )
+        self.assertRegex(
+            calls[1], r"(?ims)DO UPDATE.*lyr2_generated[^,]+=[^,]*statement_timestamp"
+        )
+        self.assertRegex(
+            calls[1],
+            r"(?ims)DO UPDATE.*lyr2_generated[^,]+=[^,]*STORE\.[^,]*lyr2_generated",
+        )
 
-        self.assertRegex(calls[1],
-                         r"(?ims)RETURNING.*lyr1_generated")
-        self.assertRegex(calls[1],
-                         r"(?ims)RETURNING.*lyr2_generated")
+        self.assertRegex(calls[1], r"(?ims)RETURNING.*lyr1_generated")
+        self.assertRegex(calls[1], r"(?ims)RETURNING.*lyr2_generated")
 
         calls.clear()
         while not rets.empty():
             rets.get()
 
-        rets.put({"id": "foo",
-                  "layers": ["lyr1", "lyr2"],
-                  "minzoom": 0,
-                  "maxzoom": 2,
-                  "tilejson": json.loads("{}")
-                  })
+        rets.put(
+            {
+                "id": "foo",
+                "layers": ["lyr1", "lyr2"],
+                "minzoom": 0,
+                "maxzoom": 2,
+                "tilejson": json.loads("{}"),
+            }
+        )
         rets.put({"generated": "datetime"})
 
         # Check that an exception is raised if trying to save a tile with layers not in storage
-        self.assertRaises(tilekiln.errors.Error, storage.save_tile, "foo", Tile(2, 1, 0),
-                          {"lyr3": b"bar"}, "datetime")
+        self.assertRaises(
+            tilekiln.errors.Error,
+            storage.save_tile,
+            "foo",
+            Tile(2, 1, 0),
+            {"lyr3": b"bar"},
+            "datetime",
+        )
 
         calls.clear()
         while not rets.empty():
             rets.get()
 
-        rets.put({"id": "foo",
-                  "layers": ["lyr1", "lyr2"],
-                  "minzoom": 0,
-                  "maxzoom": 2,
-                  "tilejson": json.loads("{}")
-                  })
+        rets.put(
+            {
+                "id": "foo",
+                "layers": ["lyr1", "lyr2"],
+                "minzoom": 0,
+                "maxzoom": 2,
+                "tilejson": json.loads("{}"),
+            }
+        )
 
         rets.put({"generated": "datetime"})
 
@@ -361,12 +432,15 @@ class TestStorage(TestCase):
         rets = queue.SimpleQueue()
         pool = FakePool(calls, rets)
 
-        rets.put({"id": "foo",
-                  "layers": ["lyr1", "lyr2"],
-                  "minzoom": 0,
-                  "maxzoom": 2,
-                  "tilejson": json.loads("{}")
-                  })
+        rets.put(
+            {
+                "id": "foo",
+                "layers": ["lyr1", "lyr2"],
+                "minzoom": 0,
+                "maxzoom": 2,
+                "tilejson": json.loads("{}"),
+            }
+        )
 
         storage = Storage(pool)
         storage.delete_tilelayers("foo", {Tile(0, 0, 0): {"lyr1", "lyr2"}})
@@ -383,14 +457,19 @@ class TestStorage(TestCase):
             rets.get()
 
         # Test combining tiles
-        rets.put({"id": "foo",
-                  "layers": ["lyr1", "lyr2"],
-                  "minzoom": 0,
-                  "maxzoom": 2,
-                  "tilejson": json.loads("{}")
-                  })
+        rets.put(
+            {
+                "id": "foo",
+                "layers": ["lyr1", "lyr2"],
+                "minzoom": 0,
+                "maxzoom": 2,
+                "tilejson": json.loads("{}"),
+            }
+        )
 
-        storage.delete_tilelayers("foo", {Tile(0, 0, 0): {"lyr1"}, Tile(1, 0, 0): {"lyr2"}})
+        storage.delete_tilelayers(
+            "foo", {Tile(0, 0, 0): {"lyr1"}, Tile(1, 0, 0): {"lyr2"}}
+        )
 
         self.assertRegex(calls[1], r"(?ims)UPDATE.*foo_z0")
         self.assertRegex(calls[1], r"(?ims)SET.*lyr1_data[^,]*=[^,]*NULL")
@@ -414,23 +493,37 @@ class TestStorage(TestCase):
 
         storage = Storage(pool)
 
-        rets.put({"id": "foo",
-                  "zoom": 0,
-                  "num_tiles": 1,
-                  "size": 1024,
-                  "percentiles": [0, 1, 2]})
-        rets.put({"id": "foo",
-                  "zoom": 1,
-                  "num_tiles": 4,
-                  "size": 4096,
-                  "percentiles": [0, 1, 2]})
+        rets.put(
+            {
+                "id": "foo",
+                "zoom": 0,
+                "num_tiles": 1,
+                "size": 1024,
+                "percentiles": [0, 1, 2],
+            }
+        )
+        rets.put(
+            {
+                "id": "foo",
+                "zoom": 1,
+                "num_tiles": 4,
+                "size": 4096,
+                "percentiles": [0, 1, 2],
+            }
+        )
         metrics = storage.metrics()
-        self.assertEqual(metrics[0], Metric(id="foo", zoom=0, num_tiles=1,
-                         size=1024, percentiles=[0, 1, 2]))
-        self.assertEqual(metrics[1], Metric(id="foo", zoom=1, num_tiles=4,
-                         size=4096, percentiles=[0, 1, 2]))
+        self.assertEqual(
+            metrics[0],
+            Metric(id="foo", zoom=0, num_tiles=1, size=1024, percentiles=[0, 1, 2]),
+        )
+        self.assertEqual(
+            metrics[1],
+            Metric(id="foo", zoom=1, num_tiles=4, size=4096, percentiles=[0, 1, 2]),
+        )
 
-        self.assertRegex(calls[0], r"(?ims)SELECT.*id.*zoom.*num_tiles.*size.*percentiles")
+        self.assertRegex(
+            calls[0], r"(?ims)SELECT.*id.*zoom.*num_tiles.*size.*percentiles"
+        )
         self.assertRegex(calls[0], r"(?ims)FROM.*tile_stats")
         # update_metrics
 
@@ -438,20 +531,28 @@ class TestStorage(TestCase):
         while not rets.empty():
             rets.get()
 
-        rets.put({"id": "foo",
-                  "layers": ["lyr1", "lyr2"],
-                  "minzoom": 0,
-                  "maxzoom": 1,
-                  "tilejson": json.loads("{}")
-                  })
+        rets.put(
+            {
+                "id": "foo",
+                "layers": ["lyr1", "lyr2"],
+                "minzoom": 0,
+                "maxzoom": 1,
+                "tilejson": json.loads("{}"),
+            }
+        )
 
         storage.update_metrics()
 
         # calls 0 and 1 are get_tileset and JIT statements
         self.assertRegex(calls[2], r"(?i)INSERT INTO.*tile_stats")
-        self.assertRegex(calls[2], r'''(?ims)SUM\(length\("?lyr1_data"?\)'''
-                                   r'''\+length\("?lyr2_data"?\)\)''')
-        self.assertRegex(calls[2], r'''(?ims)ARRAY\[.*COALESCE\(PERCENTILE_CONT\(.*\).*\).*\]''')
+        self.assertRegex(
+            calls[2],
+            r"""(?ims)SUM\(length\("?lyr1_data"?\)"""
+            r"""\+length\("?lyr2_data"?\)\)""",
+        )
+        self.assertRegex(
+            calls[2], r"""(?ims)ARRAY\[.*COALESCE\(PERCENTILE_CONT\(.*\).*\).*\]"""
+        )
         self.assertRegex(calls[2], r"(?i)FROM.*foo_z0")
         # call 3 is JIT
         self.assertRegex(calls[4], r"(?i)FROM.*foo_z1")

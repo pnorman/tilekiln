@@ -1,11 +1,11 @@
-'''
+"""
 Custom exceptions used by tilekiln
 
 Exception (base)
 |_ Error
    |_ ConfigError
    |_ RuntimeError
-'''
+"""
 
 
 class Error(Exception):
@@ -17,7 +17,8 @@ class ConfigError(Error):
 
 
 class ConfigYAMLError(ConfigError):
-    ''' Errors where YAML is invalid, missing, or types are wrong'''
+    """Errors where YAML is invalid, missing, or types are wrong"""
+
     pass
 
 
