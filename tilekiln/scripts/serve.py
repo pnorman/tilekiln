@@ -26,8 +26,8 @@ def serve() -> None:
 @click.option('-n', '--num-threads', default=len(os.sched_getaffinity(0)),
               show_default=True, help='Number of worker processes.')
 @click.option('--source-dbname')
-@click.option('--source-host', type=click.INT)
-@click.option('--source-port')
+@click.option('--source-host')
+@click.option('--source-port', type=click.INT)
 @click.option('--source-username')
 @click.option('--base-url', help='Defaults to http://127.0.0.1:8000' +
               ' or the bind host and port')
