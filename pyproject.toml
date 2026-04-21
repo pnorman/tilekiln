@@ -26,6 +26,7 @@ dependencies = [
     "fastapi",
     "fs",
     "Jinja2",
+    "setuptools<82",
     "pmtiles",
     "prometheus_client",
     "psycopg",
