@@ -1,25 +1,13 @@
-[build-system]
-requires = ["hatchling", "hatch-vcs"]
-build-backend = "hatchling.build"
-
-[tool.hatch.version]
-source = "vcs"
-
-# Allows pypi uploads. ref: https://github.com/ofek/hatch-vcs/discussions/12
-[tool.hatch.version.raw-options]
-local_scheme = "no-local-version"
-
 [project]
 name = "tilekiln"
 dynamic = ["version"]
-
 description = "A set of command-line utilities to generate and serve Mapbox Vector Tiles (MVTs)"
 readme = "README.md"
 license = "GPL-3.0-or-later"
-requires-python = ">=3.10, <4"
 authors = [
     { name = "Paul Norman", email = "osm@paulnorman.ca" },
 ]
+requires-python = ">=3.10, <4"
 keywords = [
     "mvt",
     "openstreetmap",
@@ -47,18 +35,32 @@ dependencies = [
     "uvicorn",
 ]
 
-[project.optional-dependencies]
-test = [
-    "pytest",
-]
-
-[project.scripts]
-tilekiln = "tilekiln.main:cli"
-
 [project.urls]
 "Bug Reports" = "https://github.com/pnorman/tilekiln/issues"
 Homepage = "https://github.com/pnorman/tilekiln"
 Source = "https://github.com/pnorman/tilekiln/"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.20.1",
+    "pre-commit>=4.5.1",
+    "pytest>=9.0.3",
+    "ruff>=0.15.11",
+]
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+# Allows pypi uploads. ref: https://github.com/ofek/hatch-vcs/discussions/12
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+
+[project.scripts]
+tilekiln = "tilekiln.main:cli"
 
 [tool.hatch.build.targets.sdist]
 include = [
