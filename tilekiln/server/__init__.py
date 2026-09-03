@@ -25,6 +25,7 @@ TILEKILN_THREADS = "TILEKILN_THREADS"
 STANDARD_HEADERS: dict[str, str] = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, HEAD",
+    "Access-Control-Allow-Headers": "X-Requested-With",
 }
 
 kiln: Kiln
