@@ -192,7 +192,7 @@ def serve_tile(prefix: str, zoom: int, x: int, y: int):
 
 @live.head("/{prefix}/{zoom}/{x}/{y}.mvt")
 @live.get("/{prefix}/{zoom}/{x}/{y}.mvt")
-def live_serve_tile(prefix: str, zoom: int, x: int, y: int):
+async def live_serve_tile(prefix: str, zoom: int, x: int, y: int):
     global tilesets
     if prefix not in tilesets:
         raise HTTPException(
