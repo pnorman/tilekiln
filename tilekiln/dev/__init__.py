@@ -1,7 +1,7 @@
 import os
 
 import psycopg_pool
-from fastapi import FastAPI, Response, HTTPException
+from fastapi import FastAPI, Response, HTTPException, Path, Depends
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,6 +9,8 @@ import tilekiln
 from tilekiln.kiln import Kiln
 from tilekiln.config import Config
 from tilekiln.tile import Tile
+
+MAX_ZOOM = 31
 
 
 # Constants for environment variable names
@@ -25,6 +27,17 @@ dev = FastAPI()
 dev.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
+
+
+def tile_params(
+    zoom: int = Path(ge=0, le=MAX_ZOOM), x: int = Path(ge=0), y: int = Path(ge=0)
+) -> Tile:
+    if (x >= 2**zoom) or (y >= 2**zoom):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Tile coordinates out of bounds for zoom level {zoom}.",
+        )
+    return Tile(zoom, x, y)
 
 
 @dev.on_event("startup")
@@ -82,14 +95,16 @@ def tilejson(prefix):
 
 @dev.head("/{prefix}/{zoom}/{x}/{y}.mvt")
 @dev.get("/{prefix}/{zoom}/{x}/{y}.mvt")
-def serve_tile(prefix: str, zoom: int, x: int, y: int):
+def serve_tile(prefix: str, tile: Tile = Depends(tile_params)):
     global config
     if prefix != config.id:
         raise HTTPException(
             status_code=404, detail=f"Tileset {prefix} not found on server."
         )
     global kiln
-    tile = b"".join(kiln.render_all(Tile(zoom, x, y)).values())
+    tiledata = b"".join(kiln.render_all(tile).values())
     return Response(
-        tile, media_type="application/vnd.mapbox-vector-tile", headers=STANDARD_HEADERS
+        tiledata,
+        media_type="application/vnd.mapbox-vector-tile",
+        headers=STANDARD_HEADERS,
     )

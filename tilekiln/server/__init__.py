@@ -2,7 +2,7 @@ import json
 import os
 
 import psycopg_pool
-from fastapi import FastAPI, Response, HTTPException
+from fastapi import Depends, Path, FastAPI, Response, HTTPException
 
 import tilekiln
 from tilekiln.config import Config
@@ -12,6 +12,7 @@ from tilekiln.tileset import Tileset
 from tilekiln.storage import Storage
 
 HTTP_TIME = "%a, %d %b %Y %H:%M:%S GMT"
+MAX_ZOOM = 31
 
 # Constants for MVTs
 MVT_MIME_TYPE = "application/vnd.mapbox-vector-tile"
@@ -44,6 +45,17 @@ def change_tilejson_url(tilejson: str, baseurl: str) -> str:
     modified_tilejson = json.loads(tilejson)
     modified_tilejson["tiles"] = [baseurl + "/{z}/{x}/{y}.mvt"]
     return json.dumps(modified_tilejson)
+
+
+def tile_params(
+    zoom: int = Path(ge=0, le=MAX_ZOOM), x: int = Path(ge=0), y: int = Path(ge=0)
+) -> Tile:
+    if (x >= 2**zoom) or (y >= 2**zoom):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Tile coordinates out of bounds for zoom level {zoom}.",
+        )
+    return Tile(zoom, x, y)
 
 
 @server.on_event("startup")
@@ -153,7 +165,7 @@ def tilejson(prefix: str):
 
 @server.head("/{prefix}/{zoom}/{x}/{y}.mvt")
 @server.get("/{prefix}/{zoom}/{x}/{y}.mvt")
-def serve_tile(prefix: str, zoom: int, x: int, y: int):
+def serve_tile(prefix: str, tile: Tile = Depends(tile_params)):
     global tilesets
     if prefix not in tilesets:
         raise HTTPException(
@@ -161,19 +173,19 @@ def serve_tile(prefix: str, zoom: int, x: int, y: int):
         )
 
     try:
-        tile, generated = tilesets[prefix].get_tile(Tile(zoom, x, y))
+        tiledata, generated = tilesets[prefix].get_tile(tile)
     except tilekiln.errors.ZoomNotDefined:
         raise HTTPException(
             status_code=410,
-            detail=f"""Tileset {zoom} not available for tileset {prefix}.""",
+            detail=f"""Tileset zoom {tile.zoom} not available for tileset {prefix}.""",
         )
 
     response = b""
-    for data in tile.values():
+    for data in tiledata.values():
         if data is None:
             raise HTTPException(
                 status_code=404,
-                detail=f"Tile {prefix}/{zoom}/{x}/{y} not found in storage.",
+                detail=f"Tile {prefix}/{tile.zoom}/{tile.x}/{tile.y} not found in storage.",
             )
         response += data
 
@@ -192,7 +204,7 @@ def serve_tile(prefix: str, zoom: int, x: int, y: int):
 
 @live.head("/{prefix}/{zoom}/{x}/{y}.mvt")
 @live.get("/{prefix}/{zoom}/{x}/{y}.mvt")
-async def live_serve_tile(prefix: str, zoom: int, x: int, y: int):
+async def live_serve_tile(prefix: str, tile: Tile = Depends(tile_params)):
     global tilesets
     if prefix not in tilesets:
         raise HTTPException(
@@ -201,11 +213,11 @@ async def live_serve_tile(prefix: str, zoom: int, x: int, y: int):
 
     # Attempt to serve a stored tile
     try:
-        existing, generated = tilesets[prefix].get_tile(Tile(zoom, x, y))
+        existing, generated = tilesets[prefix].get_tile(tile)
     except tilekiln.errors.ZoomNotDefined:
         raise HTTPException(
             status_code=410,
-            detail=f"""Tileset {zoom} not available for tileset {prefix}.""",
+            detail=f"""Tileset zoom {tile.zoom} not available for tileset {prefix}.""",
         )
 
     response = b""
@@ -231,7 +243,6 @@ async def live_serve_tile(prefix: str, zoom: int, x: int, y: int):
     # Storage miss, so generate a new tile
     # TODO: partially generate a new tile
     global kiln
-    tile = Tile(zoom, x, y)
     new_layers = {layer: kiln.render_layer(layer, tile) for layer in missing}
     # TODO: Make async so tile is saved and response returned in parallel
     generated = tilesets[prefix].save_tile(tile, new_layers)

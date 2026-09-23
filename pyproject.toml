@@ -69,3 +69,7 @@ tilekiln = "tilekiln.main:cli"
 include = [
     "/tilekiln",
 ]
+
+[tool.ruff.lint.flake8-bugbear]
+# Allow default arguments like, e.g., `data: List[str] = fastapi.Query(None)`.
+extend-immutable-calls = ["Depends", "fastapi.Depends", "Query", "fastapi.Query"]
