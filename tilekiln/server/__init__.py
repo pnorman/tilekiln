@@ -70,6 +70,7 @@ def load_server_config():
         max_size=1,
         num_workers=1,
         check=psycopg_pool.ConnectionPool.check_connection,
+        kwargs={"options": "-c default_transaction_read_only=on"},
     )
     # TODO: Make readonly?
 
@@ -85,7 +86,7 @@ def load_live_config():
     global tilesets
     config = tilekiln.load_config(os.environ[TILEKILN_CONFIG])
 
-    generate_args = {}
+    generate_args = {"options": "-c default_transaction_read_only=on"}
     if "GENERATE_PGDATABASE" in os.environ:
         generate_args["dbname"] = os.environ["GENERATE_PGDATABASE"]
     if "GENERATE_PGHOST" in os.environ:

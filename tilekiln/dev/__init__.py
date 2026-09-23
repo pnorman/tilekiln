@@ -53,6 +53,7 @@ def load_config():
         max_size=1,
         num_workers=1,
         check=psycopg_pool.ConnectionPool.check_connection,
+        kwargs={"options": "-c default_transaction_read_only=on"},
     )
 
     global kiln
