@@ -24,9 +24,8 @@ classifiers = [
 dependencies = [
     "Click",
     "fastapi",
-    "fs",
+    "fs-next>=0.1.1,<0.2",
     "Jinja2",
-    "setuptools<82",
     "pmtiles",
     "prometheus_client",
     "psycopg",

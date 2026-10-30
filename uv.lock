@@ -87,7 +87,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -120,17 +120,16 @@ wheels = [
 ]
 
 [[package]]
-name = "fs"
-version = "2.4.16"
+name = "fs-next"
+version = "0.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "appdirs" },
-    { name = "setuptools" },
     { name = "six" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5d/a9/af5bfd5a92592c16cdae5c04f68187a309be8a146b528eac3c6e30edbad2/fs-2.4.16.tar.gz", hash = "sha256:ae97c7d51213f4b70b6a958292530289090de3a7e15841e108fbe144f069d313", size = 187441, upload-time = "2022-05-02T09:25:54.22Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ef/03/92e4f7058a6a835da44093b8f797bc25a3119ff63db2e5d775b91ae54e45/fs_next-0.1.1.tar.gz", hash = "sha256:7fc0e9afb6a7e776fad6f953e37d19aac37523a608392517f215097e52aac372", size = 226359, upload-time = "2026-10-03T16:03:58.591Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b9/5c/a3d95dc1ec6cdeb032d789b552ecc76effa3557ea9186e1566df6aac18df/fs-2.4.16-py2.py3-none-any.whl", hash = "sha256:660064febbccda264ae0b6bace80a8d1be9e089e0a5eb2427b7d517f9a91545c", size = 135261, upload-time = "2022-05-02T09:25:52.363Z" },
+    { url = "https://files.pythonhosted.org/packages/13/e0/d1eeb81adabaf059f7f4132d482409e3a7d47230db50e4c08794ce7dc03a/fs_next-0.1.1-py3-none-any.whl", hash = "sha256:c3dee8553095ffe43028999716e6ca94405d5610cd876bfc045bddd8cc3a2899", size = 142110, upload-time = "2026-10-03T16:03:57.042Z" },
 ]
 
 [[package]]
@@ -783,15 +782,6 @@ wheels = [
 ]
 
 [[package]]
-name = "setuptools"
-version = "81.0.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0d/1c/73e719955c59b8e424d015ab450f51c0af856ae46ea2da83eba51cc88de1/setuptools-81.0.0.tar.gz", hash = "sha256:487b53915f52501f0a79ccfd0c02c165ffe06631443a886740b91af4b7a5845a", size = 1198299, upload-time = "2026-02-06T21:10:39.601Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e1/e3/c164c88b2e5ce7b24d667b9bd83589cf4f3520d97cad01534cd3c4f55fdb/setuptools-81.0.0-py3-none-any.whl", hash = "sha256:fdd925d5c5d9f62e4b74b30d6dd7828ce236fd6ed998a08d81de62ce5a6310d6", size = 1062021, upload-time = "2026-02-06T21:10:37.175Z" },
-]
-
-[[package]]
 name = "six"
 version = "1.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -819,14 +809,13 @@ source = { editable = "." }
 dependencies = [
     { name = "click" },
     { name = "fastapi" },
-    { name = "fs" },
+    { name = "fs-next" },
     { name = "jinja2" },
     { name = "pmtiles" },
     { name = "prometheus-client" },
     { name = "psycopg" },
     { name = "psycopg-pool" },
     { name = "pyyaml" },
-    { name = "setuptools" },
     { name = "tqdm" },
     { name = "uvicorn" },
 ]
@@ -845,14 +834,13 @@ dev = [
 requires-dist = [
     { name = "click" },
     { name = "fastapi" },
-    { name = "fs" },
+    { name = "fs-next", specifier = ">=0.1.1,<0.2" },
     { name = "jinja2" },
     { name = "pmtiles" },
     { name = "prometheus-client" },
     { name = "psycopg" },
     { name = "psycopg-pool" },
     { name = "pyyaml" },
-    { name = "setuptools", specifier = "<82" },
     { name = "tqdm" },
     { name = "uvicorn" },
 ]
