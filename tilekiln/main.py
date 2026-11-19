@@ -46,6 +46,13 @@ cli.add_command(tilekiln.scripts.serve.serve)
     type=click.INT,
     help="Bind socket to this port.",
 )
+@click.option(
+    "--update-interval",
+    default=300,
+    show_default=True,
+    type=click.IntRange(min=1),
+    help="Target interval in seconds between storage metrics updates.",
+)
 @click.option("--storage-dbname")
 @click.option("--storage-host")
 @click.option("--storage-port", type=click.INT)
@@ -53,6 +60,7 @@ cli.add_command(tilekiln.scripts.serve.serve)
 def prometheus(
     bind_host: str,
     bind_port: int,
+    update_interval: int,
     storage_dbname: str,
     storage_host: str,
     storage_port: int,
@@ -78,6 +86,5 @@ def prometheus(
         # for this command
         from tilekiln.prometheus import serve_prometheus
 
-        # TODO: make sleep a parameter
         click.echo(f"Running prometheus exporter on http://{bind_host}:{bind_port}/")
-        serve_prometheus(storage, bind_host, bind_port, 15)
+        serve_prometheus(storage, bind_host, bind_port, update_interval)

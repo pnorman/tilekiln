@@ -485,8 +485,7 @@ class Storage:
         )
         ''')
 
-        # This caches information on the number of tiles. Prometheus can be called every 15 seconds
-        # and doing a sequential scan that often is a bad idea
+        # Cache tile statistics to avoid a sequential scan on every Prometheus scrape.
         cur.execute(f'''CREATE TABLE IF NOT EXISTS "{self.__schema}"."{TILE_STATS_TABLE}" (
             id text,
             zoom smallint,

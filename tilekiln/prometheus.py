@@ -23,7 +23,6 @@ class TilekilnCollector(Collector):
 
         self.__i = 0
 
-    # This one is run every 15s
     def collect(self):
         # This is manually producing the metrics described in
         # https://prometheus.io/docs/concepts/metric_types/#summary
@@ -60,28 +59,15 @@ class TilekilnCollector(Collector):
         pass
 
 
-METRIC_UPDATE_TIME = prometheus_client.Summary(
-    "tilekiln_metrics_storage_seconds", "Time spent updating metrics"
-)
-
-
-@METRIC_UPDATE_TIME.time()
-def monitored_update_metrics(storage: Storage):
-    """Update storage metrics while tracking call time
-
-    The easiest way to monitor a function is to annotate it. Rather than require
-    prometheus in storage.py, we wrap it and annotate the wrapper to track call time.
-    """
-    storage.update_metrics()
-
-
-def serve_prometheus(storage: Storage, addr, port, sleep):
+def serve_prometheus(storage: Storage, addr, port, interval: int):
     """Start a prometheus server for storage info."""
     collector = TilekilnCollector(storage)
     REGISTRY.register(collector)
     # start http
     prometheus_client.start_http_server(port=port, addr=addr)
     while True:
-        # TODO: Time this with prometheus
-        monitored_update_metrics(storage)
-        time.sleep(sleep)
+        started_at = time.monotonic()
+        storage.update_metrics()
+        delay = interval - (time.monotonic() - started_at)
+        if delay > 0:
+            time.sleep(delay)
