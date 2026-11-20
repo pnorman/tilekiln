@@ -118,6 +118,7 @@ It presents a tilejson at `/<id>/tilejson.json`. In the future it will allow ser
 
 #### `prometheus`
 Starts a prometheus exporter for metrics on tiles. By default it presents metrics at `http://127.0.0.1:10013/metrics`.
+The exporter updates storage metrics on startup and aims for 300 seconds between update starts. If an update takes longer than the interval, the next starts as soon as it finishes. Use `--update-interval SECONDS` to change the interval; it does not change how often Prometheus scrapes the exporter.
 
 ## Quick-start
 These instructions give you a setup based on osm2pgsql-themepark and their shortbread setup. They assume you have PostgreSQL with PostGIS and Python 3.10+ with venv set up, and a recent version of osm2pgsql.
